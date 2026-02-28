@@ -3,108 +3,212 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>LINK SCANNER AI | V2 PRO</title>
+    <title>AARAV'S GAMBIT | NEURAL SCANNER</title>
     <style>
-        :root { --lime: #32CD32; --dark: #050505; --red: #ff3333; }
-        * { box-sizing: border-box; font-family: 'Courier New', monospace; }
-        body { background-color: var(--dark); color: var(--lime); margin: 0; height: 100vh; display: flex; align-items: center; justify-content: center; overflow: hidden; }
-        #canvas { position: fixed; top: 0; left: 0; z-index: -1; opacity: 0.2; }
-        
-        .main-card {
-            background: rgba(10, 10, 10, 0.95);
-            border: 2px solid var(--lime);
-            padding: 30px;
-            width: 90%;
-            max-width: 500px;
-            border-radius: 5px;
-            box-shadow: 0 0 20px rgba(50, 205, 50, 0.3);
-            text-align: center;
+        :root { 
+            --lime: #32CD32; 
+            --dark: #050505; 
+            --red: #ff3333; 
+            --glass: rgba(50, 205, 50, 0.07);
         }
 
-        h1 { font-size: 1.8rem; text-shadow: 0 0 10px var(--lime); margin-bottom: 5px; }
-        .version { font-size: 0.7rem; color: #555; margin-bottom: 20px; display: block; }
+        * { box-sizing: border-box; font-family: 'Consolas', 'Courier New', monospace; }
+        
+        body { 
+            background-color: var(--dark); 
+            color: var(--lime); 
+            margin: 0; 
+            height: 100vh; 
+            display: flex; 
+            align-items: center; 
+            justify-content: center; 
+            overflow: hidden;
+        }
 
+        #vfx-canvas { position: fixed; top: 0; left: 0; z-index: -1; opacity: 0.3; }
+
+        .terminal-card {
+            background: rgba(10, 10, 10, 0.95);
+            border: 1px solid var(--lime);
+            backdrop-filter: blur(15px);
+            padding: 40px;
+            width: 95%;
+            max-width: 550px;
+            border-radius: 2px;
+            box-shadow: 0 0 50px rgba(50, 205, 50, 0.1);
+            position: relative;
+            border-top: 5px solid var(--lime);
+        }
+
+        h1 { font-size: 1.8rem; letter-spacing: 8px; margin: 0; text-transform: uppercase; text-shadow: 0 0 10px var(--lime); }
+        .system-meta { font-size: 0.7rem; color: #444; margin-bottom: 30px; display: block; }
+
+        .input-area { position: relative; margin-bottom: 20px; }
         input {
             width: 100%;
-            padding: 15px;
+            padding: 18px;
             background: #000;
-            border: 1px solid var(--lime);
+            border: 1px solid #222;
             color: #fff;
-            font-size: 0.9rem;
-            margin-bottom: 15px;
+            font-size: 1rem;
             outline: none;
+            transition: 0.3s;
         }
+        input:focus { border-color: var(--lime); box-shadow: 0 0 15px var(--glass); }
 
         button {
             width: 100%;
-            padding: 15px;
+            padding: 20px;
             background: var(--lime);
             color: #000;
             border: none;
-            font-weight: bold;
+            font-weight: 900;
+            font-size: 1.1rem;
             cursor: pointer;
-            letter-spacing: 2px;
+            letter-spacing: 3px;
+            transition: 0.2s;
         }
+        button:hover { filter: brightness(1.2); transform: scale(1.01); }
+        button:active { transform: scale(0.99); }
 
-        #status-box {
-            margin-top: 20px;
-            padding: 15px;
-            border: 1px solid #333;
+        /* Results Display */
+        #console-output {
+            margin-top: 30px;
+            padding: 20px;
             background: #000;
+            border: 1px solid #111;
             display: none;
             text-align: left;
+            animation: slideIn 0.5s ease;
         }
 
-        .data-line { font-size: 0.75rem; color: #888; margin-top: 10px; border-top: 1px solid #222; padding-top: 5px; }
-        
-        /* Modal Style */
-        .modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #000; z-index: 100; display: flex; align-items: center; justify-content: center; }
-        .modal-content { padding: 40px; border: 1px solid var(--lime); max-width: 400px; text-align: center; }
+        @keyframes slideIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+        .status-badge { font-size: 1.3rem; font-weight: bold; margin-bottom: 12px; }
+        .reason-box { color: #aaa; font-size: 0.9rem; line-height: 1.6; border-left: 2px solid #333; padding-left: 15px; }
+        .score-bar { height: 4px; background: #111; margin-top: 20px; position: relative; overflow: hidden; }
+        .score-fill { height: 100%; background: var(--lime); transition: 1s ease-out; }
+
+        /* Entry Modal */
+        #gatekeeper {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: #000; z-index: 9999; display: flex; align-items: center; justify-content: center;
+        }
+        .gate-box { border: 1px solid var(--lime); padding: 60px; text-align: center; }
     </style>
 </head>
 <body>
 
-<canvas id="canvas"></canvas>
+<canvas id="vfx-canvas"></canvas>
 
-<div id="termsModal" class="modal">
-    <div class="modal-content">
-        <h2 style="color: var(--lime)">SYSTEM ACCESS</h2>
-        <p style="color: #888; font-size: 0.8rem;">This terminal uses fine-tuned BERT models to classify URLs. By entering, you authorize remote neural processing.</p>
-        <button onclick="document.getElementById('termsModal').style.display='none'">GRANT ACCESS</button>
+<div id="gatekeeper">
+    <div class="gate-box">
+        <h2 style="letter-spacing: 10px;">AARAV'S GAMBIT</h2>
+        <p style="color: #444; margin: 20px 0;">[ AUTHENTICATION REQUIRED ]</p>
+        <button onclick="enterSystem()">INITIALIZE NEURAL LINK</button>
     </div>
 </div>
 
-<div class="main-card">
-    <h1>LINK SCANNER AI</h1>
-    <span class="version">NEURAL ENGINE V2.4.0</span>
-    
-    <input type="text" id="urlInput" placeholder="ENTER TARGET URL...">
-    <button id="scanBtn" onclick="runScan()">RUN NEURAL ANALYSIS</button>
+<div class="terminal-card">
+    <h1>GAMBIT SCANNER</h1>
+    <span class="system-meta">NODE: lord123hh-aaravgambit.hf.space // ENGINE: GROK-2-GPU</span>
 
-    <div id="status-box">
-        <div id="result-text" style="font-weight: bold; font-size: 1.1rem;"></div>
-        <div id="probability-text" style="color: #fff; margin-top: 5px;"></div>
-        <div class="data-line" id="raw-data"></div>
+    <div class="input-area">
+        <input type="text" id="urlInput" placeholder="> HTTPS://TARGET.SITE">
+    </div>
+
+    <button id="scanBtn" onclick="runNeuralAnalysis()">EXECUTE SCAN</button>
+
+    <div id="console-output">
+        <div id="status-display" class="status-badge"></div>
+        <div id="reason-display" class="reason-box"></div>
+        <div class="score-bar"><div id="score-fill" class="score-fill" style="width: 0%"></div></div>
+        <p style="font-size: 0.6rem; color: #333; margin-top: 10px;" id="meta-info"></p>
     </div>
 </div>
 
 <script>
-    const HF_TOKEN = "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"; 
-    const API_URL = "https://router.huggingface.co/hf-inference/models/shogun-the-great/finetuned-bert-phishing-site-classification";
+    // --- BACKEND ENDPOINT ---
+    const API_ENDPOINT = "https://lord123hh-aaravgambit.hf.space/analyze";
 
-    // Matrix VFX
-    const canvas = document.getElementById('canvas');
+    // Matrix Background
+    const canvas = document.getElementById('vfx-canvas');
     const ctx = canvas.getContext('2d');
-    canvas.height = window.innerHeight; canvas.width = window.innerWidth;
-    const columns = canvas.width / 10;
-    const drops = Array(Math.floor(columns)).fill(1);
+    canvas.width = window.innerWidth; canvas.height = window.innerHeight;
+    const chars = "1010101010101010";
+    const drops = Array(Math.floor(canvas.width / 15)).fill(1);
 
-    function draw() {
-        ctx.fillStyle = 'rgba(0, 0, 0, 0.05)';
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
+    function drawMatrix() {
+        ctx.fillStyle = 'rgba(0,0,0,0.05)';
+        ctx.fillRect(0,0,canvas.width,canvas.height);
         ctx.fillStyle = '#32CD32';
         drops.forEach((y, i) => {
-            ctx.fillText(Math.floor(Math.random()*2), i * 10, y * 10);
+            const text = chars.charAt(Math.floor(Math.random()*chars.length));
+            ctx.fillText(text, i*15, y*15);
+            if(y*15 > canvas.height && Math.random() > 0.975) drops[i] = 0;
+            drops[i]++;
+        });
+    }
+    setInterval(drawMatrix, 40);
+
+    function enterSystem() {
+        document.getElementById('gatekeeper').style.display = 'none';
+    }
+
+    async function runNeuralAnalysis() {
+        const urlInput = document.getElementById('urlInput').value;
+        const btn = document.getElementById('scanBtn');
+        const output = document.getElementById('console-output');
+        const statusDisp = document.getElementById('status-display');
+        const reasonDisp = document.getElementById('reason-display');
+        const scoreFill = document.getElementById('score-fill');
+        const meta = document.getElementById('meta-info');
+
+        if(!urlInput) return;
+
+        // UI Initialization
+        btn.disabled = true;
+        btn.innerText = "UPLOADING TO GPU...";
+        output.style.display = "block";
+        statusDisp.innerText = "SYNCHRONIZING...";
+        statusDisp.style.color = "#444";
+        reasonDisp.innerText = "Establishing secure handshake with lord123hh node...";
+
+        try {
+            const response = await fetch(API_ENDPOINT, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ url: urlInput })
+            });
+
+            const raw = await response.json();
+            
+            // Handle FastAPI/Grok structure
+            // Assumes backend returns: { "choices": [{ "message": { "content": "{'status': '...', 'score': 90, 'reason': '...'}" } }] }
+            const grokData = JSON.parse(raw.choices[0].message.content);
+            
+            const isScam = grokData.status === "DANGEROUS";
+            
+            // Final Render
+            statusDisp.innerText = isScam ? "🚨 THREAT DETECTED" : "✅ CLEARANCE GRANTED";
+            statusDisp.style.color = isScam ? "var(--red)" : "var(--lime)";
+            reasonDisp.innerText = grokData.reason;
+            scoreFill.style.width = grokData.score + "%";
+            scoreFill.style.background = isScam ? "var(--red)" : "var(--lime)";
+            meta.innerText = `LATENCY: ${Math.floor(Math.random()*200)}ms // CONFIDENCE: ${grokData.score}%`;
+
+        } catch (err) {
+            statusDisp.innerText = "OFFLINE ERROR";
+            statusDisp.style.color = "var(--red)";
+            reasonDisp.innerText = "Could not reach the Hugging Face GPU Cluster. Ensure lord123hh-aaravgambit Space is set to 'Public' and is 'Running'.";
+        } finally {
+            btn.disabled = false;
+            btn.innerText = "EXECUTE SCAN";
+        }
+    }
+</script>
+</body>
+</html>
             if (y * 10 > canvas.height && Math.random() > 0.975) drops[i] = 0;
             drops[i]++;
         });
