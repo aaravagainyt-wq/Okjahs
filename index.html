@@ -3,61 +3,37 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>LINK SCANNER AI | PRO</title>
+    <title>LINK SCANNER AI | V2 PRO</title>
     <style>
-        :root { --lime: #32CD32; --dark: #050505; --glass: rgba(50, 205, 50, 0.1); }
+        :root { --lime: #32CD32; --dark: #050505; --red: #ff3333; }
+        * { box-sizing: border-box; font-family: 'Courier New', monospace; }
+        body { background-color: var(--dark); color: var(--lime); margin: 0; height: 100vh; display: flex; align-items: center; justify-content: center; overflow: hidden; }
+        #canvas { position: fixed; top: 0; left: 0; z-index: -1; opacity: 0.2; }
         
-        * { box-sizing: border-box; font-family: 'Segoe UI', Roboto, monospace; }
-        
-        body { 
-            background-color: var(--dark); 
-            color: var(--lime); 
-            margin: 0; 
-            height: 100vh; 
-            display: flex; 
-            align-items: center; 
-            justify-content: center; 
-            overflow: hidden;
-        }
-
-        /* Matrix Background VFX */
-        #canvas { position: fixed; top: 0; left: 0; z-index: -1; opacity: 0.3; }
-
         .main-card {
-            background: rgba(10, 10, 10, 0.9);
-            border: 1px solid var(--lime);
-            backdrop-filter: blur(10px);
-            padding: 40px;
+            background: rgba(10, 10, 10, 0.95);
+            border: 2px solid var(--lime);
+            padding: 30px;
             width: 90%;
-            max-width: 450px;
-            border-radius: 20px;
+            max-width: 500px;
+            border-radius: 5px;
+            box-shadow: 0 0 20px rgba(50, 205, 50, 0.3);
             text-align: center;
-            box-shadow: 0 0 30px rgba(50, 205, 50, 0.2);
-            animation: glow 4s infinite alternate;
         }
 
-        @keyframes glow {
-            from { box-shadow: 0 0 20px rgba(50, 205, 50, 0.1); }
-            to { box-shadow: 0 0 40px rgba(50, 205, 50, 0.4); }
-        }
-
-        h1 { font-size: 2rem; letter-spacing: 4px; margin-bottom: 10px; text-transform: uppercase; }
-        p.subtitle { color: #888; font-size: 0.8rem; margin-bottom: 30px; }
+        h1 { font-size: 1.8rem; text-shadow: 0 0 10px var(--lime); margin-bottom: 5px; }
+        .version { font-size: 0.7rem; color: #555; margin-bottom: 20px; display: block; }
 
         input {
             width: 100%;
             padding: 15px;
-            background: #111;
-            border: 1px solid #333;
-            border-radius: 10px;
+            background: #000;
+            border: 1px solid var(--lime);
             color: #fff;
-            font-size: 1rem;
+            font-size: 0.9rem;
+            margin-bottom: 15px;
             outline: none;
-            transition: 0.3s;
-            margin-bottom: 20px;
         }
-
-        input:focus { border-color: var(--lime); box-shadow: 0 0 10px var(--glass); }
 
         button {
             width: 100%;
@@ -65,29 +41,25 @@
             background: var(--lime);
             color: #000;
             border: none;
-            border-radius: 10px;
             font-weight: bold;
-            font-size: 1rem;
             cursor: pointer;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-            transition: 0.3s;
+            letter-spacing: 2px;
         }
 
-        button:hover { transform: translateY(-2px); box-shadow: 0 5px 15px var(--lime); }
-
-        #status { margin-top: 25px; padding: 15px; border-radius: 10px; display: none; font-size: 0.9rem; }
-
-        /* Terms Modal */
-        .modal {
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0,0,0,0.95); display: flex; align-items: center;
-            justify-content: center; z-index: 100;
+        #status-box {
+            margin-top: 20px;
+            padding: 15px;
+            border: 1px solid #333;
+            background: #000;
+            display: none;
+            text-align: left;
         }
-        .modal-content {
-            background: #111; border: 1px solid var(--lime); padding: 30px;
-            max-width: 400px; border-radius: 15px; text-align: center;
-        }
+
+        .data-line { font-size: 0.75rem; color: #888; margin-top: 10px; border-top: 1px solid #222; padding-top: 5px; }
+        
+        /* Modal Style */
+        .modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #000; z-index: 100; display: flex; align-items: center; justify-content: center; }
+        .modal-content { padding: 40px; border: 1px solid var(--lime); max-width: 400px; text-align: center; }
     </style>
 </head>
 <body>
@@ -96,100 +68,94 @@
 
 <div id="termsModal" class="modal">
     <div class="modal-content">
-        <h2>TERMS & PRIVACY</h2>
-        <p style="color: #ccc; font-size: 0.9rem; line-height: 1.6;">
-            By using <b>Link Scanner AI</b>, you agree that submitted URLs are processed via <b>Hugging Face Cloud AI</b>. We do not store your personal data locally or remotely.
-        </p>
-        <button onclick="acceptTerms()">I ACCEPT</button>
+        <h2 style="color: var(--lime)">SYSTEM ACCESS</h2>
+        <p style="color: #888; font-size: 0.8rem;">This terminal uses fine-tuned BERT models to classify URLs. By entering, you authorize remote neural processing.</p>
+        <button onclick="document.getElementById('termsModal').style.display='none'">GRANT ACCESS</button>
     </div>
 </div>
 
 <div class="main-card">
-    <h1>AI SCANNER</h1>
-    <p class="subtitle">POWERED BY BERT-BASE NEURAL NETWORK</p>
+    <h1>LINK SCANNER AI</h1>
+    <span class="version">NEURAL ENGINE V2.4.0</span>
     
     <input type="text" id="urlInput" placeholder="ENTER TARGET URL...">
-    <button id="scanBtn" onclick="runAnalysis()">INITIATE ANALYSIS</button>
+    <button id="scanBtn" onclick="runScan()">RUN NEURAL ANALYSIS</button>
 
-    <div id="status"></div>
+    <div id="status-box">
+        <div id="result-text" style="font-weight: bold; font-size: 1.1rem;"></div>
+        <div id="probability-text" style="color: #fff; margin-top: 5px;"></div>
+        <div class="data-line" id="raw-data"></div>
+    </div>
 </div>
 
 <script>
-    // --- VIRTUAL AI TOKEN & ROUTER ---
-    const HF_TOKEN = "YOUR_TOKEN_HERE"; 
+    const HF_TOKEN = "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"; 
     const API_URL = "https://router.huggingface.co/hf-inference/models/shogun-the-great/finetuned-bert-phishing-site-classification";
 
-    // Matrix Background Animation
+    // Matrix VFX
     const canvas = document.getElementById('canvas');
     const ctx = canvas.getContext('2d');
-    canvas.height = window.innerHeight;
-    canvas.width = window.innerWidth;
-    const characters = '01ABCDEFGHIJKLMNOPQRSTUVWXYZ';
-    const fontSize = 10;
-    const columns = canvas.width / fontSize;
+    canvas.height = window.innerHeight; canvas.width = window.innerWidth;
+    const columns = canvas.width / 10;
     const drops = Array(Math.floor(columns)).fill(1);
 
-    function drawMatrix() {
+    function draw() {
         ctx.fillStyle = 'rgba(0, 0, 0, 0.05)';
         ctx.fillRect(0, 0, canvas.width, canvas.height);
         ctx.fillStyle = '#32CD32';
-        ctx.font = fontSize + 'px monospace';
-        for (let i = 0; i < drops.length; i++) {
-            const text = characters.charAt(Math.floor(Math.random() * characters.length));
-            ctx.fillText(text, i * fontSize, drops[i] * fontSize);
-            if (drops[i] * fontSize > canvas.height && Math.random() > 0.975) drops[i] = 0;
+        drops.forEach((y, i) => {
+            ctx.fillText(Math.floor(Math.random()*2), i * 10, y * 10);
+            if (y * 10 > canvas.height && Math.random() > 0.975) drops[i] = 0;
             drops[i]++;
-        }
+        });
     }
-    setInterval(drawMatrix, 35);
+    setInterval(draw, 33);
 
-    function acceptTerms() {
-        document.getElementById('termsModal').style.display = 'none';
-    }
-
-    async function runAnalysis() {
+    async function runScan() {
         const input = document.getElementById('urlInput').value;
-        const status = document.getElementById('status');
+        const statusBox = document.getElementById('status-box');
+        const resText = document.getElementById('result-text');
+        const probText = document.getElementById('probability-text');
+        const rawData = document.getElementById('raw-data');
         const btn = document.getElementById('scanBtn');
 
-        if (!input) return alert("System requires a target URL.");
+        if (!input) return;
 
         btn.disabled = true;
-        btn.innerText = "ANALYZING...";
-        status.style.display = "block";
-        status.style.background = "rgba(255,255,255,0.05)";
-        status.style.color = "#fff";
-        status.innerText = "Connecting to Neural Core...";
+        btn.innerText = "PARSING DATA...";
+        statusBox.style.display = "block";
+        resText.innerText = "ANALYZING...";
+        resText.style.color = "#888";
 
         try {
             const response = await fetch(API_URL, {
                 method: "POST",
-                headers: { 
-                    "Authorization": `Bearer ${HF_TOKEN}`,
-                    "Content-Type": "application/json" 
-                },
+                headers: { "Authorization": `Bearer ${HF_TOKEN}`, "Content-Type": "application/json" },
                 body: JSON.stringify({ inputs: input })
             });
 
-            if (response.status === 503 || response.status === 429) {
-                status.innerText = "AI COLD START: Model is warming up. Please wait 20s.";
-                btn.disabled = false;
-                btn.innerText = "RETRY SCAN";
-                return;
-            }
-
             const data = await response.json();
-            const isMalicious = JSON.stringify(data).includes("LABEL_1");
-
-            status.style.background = isMalicious ? "rgba(255,0,0,0.2)" : "rgba(50,205,50,0.2)";
-            status.style.color = isMalicious ? "#ff4444" : "#32CD32";
-            status.innerHTML = isMalicious ? "🚨 THREAT DETECTED: Phishing Pattern Found" : "✅ SYSTEM SECURE: Link is Legitimate";
             
+            // Hugging Face returns an array: [[{label: "LABEL_1", score: 0.9}, {label: "LABEL_0", score: 0.1}]]
+            // We need to find which label has the HIGHEST score.
+            const results = data[0]; 
+            const topResult = results.sort((a, b) => b.score - a.score)[0];
+
+            // LABEL_1 is Phishing for this model
+            const isPhishing = topResult.label === "LABEL_1";
+            const confidence = (topResult.score * 100).toFixed(2);
+
+            resText.innerText = isPhishing ? "🚨 MALICIOUS THREAT DETECTED" : "✅ URL IS LEGITIMATE";
+            resText.style.color = isPhishing ? "var(--red)" : "var(--lime)";
+            probText.innerText = `Confidence Level: ${confidence}%`;
+            rawData.innerText = "NEURAL_LOG: " + JSON.stringify(data[0]);
+
         } catch (err) {
-            status.innerText = "ERROR: Connection to AI Core failed.";
+            resText.innerText = "SYSTEM ERROR";
+            probText.innerText = "Check Connection/Token";
         } finally {
             btn.disabled = false;
-            btn.innerText = "INITIATE ANALYSIS";
+            btn.innerText = "RUN NEURAL ANALYSIS";
         }
     }
 </script>
