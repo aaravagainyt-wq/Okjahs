@@ -1,0 +1,79 @@
+:root {
+  --neon-blue: #00f2ff;
+  --neon-purple: #bc13fe;
+  --bg-dark: #0a0a0c;
+}
+
+body {
+  margin: 0;
+  background-color: var(--bg-dark);
+  color: white;
+  font-family: 'Inter', sans-serif;
+  overflow: hidden; /* Prevent scrolling outside the chat */
+}
+
+/* Animated Neon Background */
+.bg-animate {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: radial-gradient(circle at 50% 50%, #1a1a2e 0%, #0a0a0c 100%);
+  z-index: -1;
+}
+
+.chat-card {
+  background: rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(15px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 20px;
+  box-shadow: 0 0 30px rgba(0, 242, 255, 0.1);
+  margin: 20px auto;
+  max-width: 500px;
+  height: 80vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.message-user {
+  align-self: flex-end;
+  background: linear-gradient(90deg, var(--neon-blue), var(--neon-purple));
+  padding: 10px 15px;
+  border-radius: 15px 15px 0 15px;
+  margin: 10px;
+}
+
+.message-ai {
+  align-self: flex-start;
+  background: rgba(255, 255, 255, 0.1);
+  padding: 10px 15px;
+  border-radius: 15px 15px 15px 0;
+  margin: 10px;
+  border: 0.5px solid var(--neon-blue);
+}
+
+.input-area {
+  padding: 20px;
+  display: flex;
+  gap: 10px;
+}
+
+input {
+  flex: 1;
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid var(--neon-blue);
+  color: white;
+  padding: 12px;
+  border-radius: 10px;
+  outline: none;
+}
+
+button {
+  background: var(--neon-blue);
+  border: none;
+  padding: 10px 20px;
+  border-radius: 10px;
+  font-weight: bold;
+  cursor: pointer;
+}
