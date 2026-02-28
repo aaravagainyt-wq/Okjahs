@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LINK SCANNER AI | PRO</title>
+    <style>
+        :root { --lime: #32CD32; --dark: #050505; --glass: rgba(50, 205, 50, 0.1); }
+        
+        * { box-sizing: border-box; font-family: 'Segoe UI', Roboto, monospace; }
+        
+        body { 
+            background-color: var(--dark); 
+            color: var(--lime); 
+            margin: 0; 
+            height: 100vh; 
+            display: flex; 
+            align-items: center; 
+            justify-content: center; 
+            overflow: hidden;
+        }
+
+        /* Matrix Background VFX */
+        #canvas { position: fixed; top: 0; left: 0; z-index: -1; opacity: 0.3; }
+
+        .main-card {
+            background: rgba(10, 10, 10, 0.9);
+            border: 1px solid var(--lime);
+            backdrop-filter: blur(10px);
+            padding: 40px;
+            width: 90%;
+            max-width: 450px;
+            border-radius: 20px;
+            text-align: center;
+            box-shadow: 0 0 30px rgba(50, 205, 50, 0.2);
+            animation: glow 4s infinite alternate;
+        }
+
+        @keyframes glow {
+            from { box-shadow: 0 0 20px rgba(50, 205, 50, 0.1); }
+            to { box-shadow: 0 0 40px rgba(50, 205, 50, 0.4); }
+        }
+
+        h1 { font-size: 2rem; letter-spacing: 4px; margin-bottom: 10px; text-transform: uppercase; }
+        p.subtitle { color: #888; font-size: 0.8rem; margin-bottom: 30px; }
+
+        input {
+            width: 100%;
+            padding: 15px;
+            background: #111;
+            border: 1px solid #333;
+            border-radius: 10px;
+            color: #fff;
+            font-size: 1rem;
+            outline: none;
+            transition: 0.3s;
+            margin-bottom: 20px;
+        }
+
+        input:focus { border-color: var(--lime); box-shadow: 0 0 10px var(--glass); }
+
+        button {
+            width: 100%;
+            padding: 15px;
+            background: var(--lime);
+            color: #000;
+            border: none;
+            border-radius: 10px;
+            font-weight: bold;
+            font-size: 1rem;
+            cursor: pointer;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            transition: 0.3s;
+        }
+
+        button:hover { transform: translateY(-2px); box-shadow: 0 5px 15px var(--lime); }
+
+        #status { margin-top: 25px; padding: 15px; border-radius: 10px; display: none; font-size: 0.9rem; }
+
+        /* Terms Modal */
+        .modal {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.95); display: flex; align-items: center;
+            justify-content: center; z-index: 100;
+        }
+        .modal-content {
+            background: #111; border: 1px solid var(--lime); padding: 30px;
+            max-width: 400px; border-radius: 15px; text-align: center;
+        }
+    </style>
+</head>
+<body>
+
+<canvas id="canvas"></canvas>
+
+<div id="termsModal" class="modal">
+    <div class="modal-content">
+        <h2>TERMS & PRIVACY</h2>
+        <p style="color: #ccc; font-size: 0.9rem; line-height: 1.6;">
+            By using <b>Link Scanner AI</b>, you agree that submitted URLs are processed via <b>Hugging Face Cloud AI</b>. We do not store your personal data locally or remotely.
+        </p>
+        <button onclick="acceptTerms()">I ACCEPT</button>
+    </div>
+</div>
+
+<div class="main-card">
+    <h1>AI SCANNER</h1>
+    <p class="subtitle">POWERED BY BERT-BASE NEURAL NETWORK</p>
+    
+    <input type="text" id="urlInput" placeholder="ENTER TARGET URL...">
+    <button id="scanBtn" onclick="runAnalysis()">INITIATE ANALYSIS</button>
+
+    <div id="status"></div>
+</div>
+
+<script>
+    // --- VIRTUAL AI TOKEN & ROUTER ---
+    const HF_TOKEN = "YOUR_TOKEN_HERE"; 
+    const API_URL = "https://router.huggingface.co/hf-inference/models/shogun-the-great/finetuned-bert-phishing-site-classification";
+
+    // Matrix Background Animation
+    const canvas = document.getElementById('canvas');
+    const ctx = canvas.getContext('2d');
+    canvas.height = window.innerHeight;
+    canvas.width = window.innerWidth;
+    const characters = '01ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+    const fontSize = 10;
+    const columns = canvas.width / fontSize;
+    const drops = Array(Math.floor(columns)).fill(1);
+
+    function drawMatrix() {
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.05)';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.fillStyle = '#32CD32';
+        ctx.font = fontSize + 'px monospace';
+        for (let i = 0; i < drops.length; i++) {
+            const text = characters.charAt(Math.floor(Math.random() * characters.length));
+            ctx.fillText(text, i * fontSize, drops[i] * fontSize);
+            if (drops[i] * fontSize > canvas.height && Math.random() > 0.975) drops[i] = 0;
+            drops[i]++;
+        }
+    }
+    setInterval(drawMatrix, 35);
+
+    function acceptTerms() {
+        document.getElementById('termsModal').style.display = 'none';
+    }
+
+    async function runAnalysis() {
+        const input = document.getElementById('urlInput').value;
+        const status = document.getElementById('status');
+        const btn = document.getElementById('scanBtn');
+
+        if (!input) return alert("System requires a target URL.");
+
+        btn.disabled = true;
+        btn.innerText = "ANALYZING...";
+        status.style.display = "block";
+        status.style.background = "rgba(255,255,255,0.05)";
+        status.style.color = "#fff";
+        status.innerText = "Connecting to Neural Core...";
+
+        try {
+            const response = await fetch(API_URL, {
+                method: "POST",
+                headers: { 
+                    "Authorization": `Bearer ${HF_TOKEN}`,
+                    "Content-Type": "application/json" 
+                },
+                body: JSON.stringify({ inputs: input })
+            });
+
+            if (response.status === 503 || response.status === 429) {
+                status.innerText = "AI COLD START: Model is warming up. Please wait 20s.";
+                btn.disabled = false;
+                btn.innerText = "RETRY SCAN";
+                return;
+            }
+
+            const data = await response.json();
+            const isMalicious = JSON.stringify(data).includes("LABEL_1");
+
+            status.style.background = isMalicious ? "rgba(255,0,0,0.2)" : "rgba(50,205,50,0.2)";
+            status.style.color = isMalicious ? "#ff4444" : "#32CD32";
+            status.innerHTML = isMalicious ? "🚨 THREAT DETECTED: Phishing Pattern Found" : "✅ SYSTEM SECURE: Link is Legitimate";
+            
+        } catch (err) {
+            status.innerText = "ERROR: Connection to AI Core failed.";
+        } finally {
+            btn.disabled = false;
+            btn.innerText = "INITIATE ANALYSIS";
+        }
+    }
+</script>
+</body>
+</html>
+
