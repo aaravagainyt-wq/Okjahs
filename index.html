@@ -56,6 +56,15 @@
         #chat-box::-webkit-scrollbar-thumb { background: var(--neon-cyan); border-radius: 10px; }
 
         canvas { position: fixed; top: 0; left: 0; z-index: -1; }
+        
+        /* Blinking cursor effect for typing */
+        .typing-cursor::after {
+            content: '█';
+            animation: blink 1s step-end infinite;
+            color: var(--neon-cyan);
+            margin-left: 2px;
+        }
+        @keyframes blink { 50% { opacity: 0; } }
     </style>
 </head>
 <body class="flex items-center justify-center p-4">
@@ -82,7 +91,7 @@
             <div class="flex gap-2">
                 <input type="text" id="userInput" placeholder="Input command..." 
                     class="flex-1 bg-white/5 border border-white/10 rounded-xl px-4 py-3 outline-none focus:border-[#00f2ff] transition-all text-sm">
-                <button onclick="sendMessage()" 
+                <button id="sendBtn" 
                     class="bg-[#00f2ff] text-black font-bold px-6 py-3 rounded-xl hover:scale-105 active:scale-95 transition-all shadow-[0_0_15px_#00f2ff]">
                     EXEC
                 </button>
@@ -90,7 +99,9 @@
         </div>
     </div>
 
-    <script>
+    <script type="module">
+        import { client } from "https://cdn.jsdelivr.net/npm/@gradio/client/dist/index.min.js";
+
         // --- MATRIX BACKGROUND LOGIC ---
         const canvas = document.getElementById('matrix');
         const ctx = canvas.getContext('2d');
@@ -118,40 +129,82 @@
         // --- AI CHAT LOGIC ---
         const chatBox = document.getElementById('chat-box');
         const userInput = document.getElementById('userInput');
+        const sendBtn = document.getElementById('sendBtn');
+        
+        // Make sure to match your exact Hugging Face space name
+        const HF_SPACE_URL = "lord123hh/shsj"; 
+        let chatHistory = []; // Keeps track of conversation
 
         async function sendMessage() {
             const text = userInput.value.trim();
             if (!text) return;
 
-            // User Message UI
-            appendMessage('user', text);
+            // Display User Message UI
+            appendUserMessage(text);
             userInput.value = '';
+            
+            // Create an empty AI bubble that we will update with the stream
+            const aiTextElement = appendEmptyAIMessage();
+            aiTextElement.classList.add("typing-cursor");
 
             try {
-                // REPLACE THIS URL with your actual Hugging Face Space URL
-                const response = await fetch("https://lord123hh-shsj.hf.space", {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ message: text })
+                // Connect to Hugging Face
+                const app = await client(HF_SPACE_URL);
+                
+                // Submit the request to the /chat endpoint
+                const submission = app.submit("/chat", [
+                    text,
+                    chatHistory
+                ]);
+
+                let fullResponse = "";
+
+                // Listen for streaming data chunks
+                submission.on("data", (event) => {
+                    fullResponse = event.data[0];
+                    aiTextElement.innerText = fullResponse;
+                    chatBox.scrollTop = chatBox.scrollHeight;
                 });
-                const data = await response.json();
-                appendMessage('ai', data.reply);
+
+                // When the stream finishes, update history and remove the cursor
+                submission.on("status", (status) => {
+                    if (status.stage === "complete") {
+                        aiTextElement.classList.remove("typing-cursor");
+                        chatHistory.push([text, fullResponse]);
+                    }
+                });
+
             } catch (err) {
-                appendMessage('ai', "ERROR: Connection to backend failed. Check Hugging Face Space status.");
+                console.error(err);
+                aiTextElement.classList.remove("typing-cursor");
+                aiTextElement.innerText = "ERROR: Connection to backend failed.";
             }
         }
 
-        function appendMessage(role, text) {
+        // Helpers for UI
+        function appendUserMessage(text) {
             const div = document.createElement('div');
-            div.className = role === 'user' 
-                ? "bg-gradient-to-r from-[#00f2ff] to-[#bc13fe] p-4 rounded-2xl rounded-tr-none ml-auto max-w-[85%] text-black font-medium shadow-lg"
-                : "bg-white/5 border border-white/10 p-4 rounded-2xl rounded-tl-none max-w-[85%] text-white/90";
+            div.className = "bg-gradient-to-r from-[#00f2ff] to-[#bc13fe] p-4 rounded-2xl rounded-tr-none ml-auto max-w-[85%] text-black font-medium shadow-lg";
             div.innerHTML = `<p class="text-sm leading-relaxed">${text}</p>`;
             chatBox.appendChild(div);
             chatBox.scrollTop = chatBox.scrollHeight;
         }
 
-        // Enter key support
+        function appendEmptyAIMessage() {
+            const div = document.createElement('div');
+            div.className = "bg-white/5 border border-white/10 p-4 rounded-2xl rounded-tl-none max-w-[85%] text-white/90";
+            
+            const p = document.createElement('p');
+            p.className = "text-sm leading-relaxed";
+            
+            div.appendChild(p);
+            chatBox.appendChild(div);
+            chatBox.scrollTop = chatBox.scrollHeight;
+            return p; // Return the paragraph so we can inject text into it later
+        }
+
+        // Event Listeners
+        sendBtn.addEventListener("click", sendMessage);
         userInput.addEventListener("keypress", (e) => { if(e.key === "Enter") sendMessage(); });
     </script>
 </body>
