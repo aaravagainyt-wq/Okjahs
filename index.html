@@ -92,14 +92,14 @@
         <div class="p-6 border-b border-white/10 flex justify-between items-center">
             <div>
                 <h1 class="text-xl font-bold tracking-widest text-[#00f2ff]">AARAV_AI_V1</h1>
-                <p class="text-xs text-white/50 uppercase tracking-tighter">Status: Gemini Pro Engine Online</p>
+                <p class="text-xs text-white/50 uppercase tracking-tighter">Status: Groq LPU Engine Online</p>
             </div>
             <div class="h-3 w-3 rounded-full bg-cyan-400 animate-pulse shadow-[0_0_10px_#00f2ff]"></div>
         </div>
 
         <div id="chat-box" class="flex-1 overflow-y-auto p-6 space-y-4">
             <div class="bg-white/5 border border-white/10 p-4 rounded-2xl rounded-tl-none max-w-[85%]">
-                <p class="text-sm leading-relaxed">System initialized. Neural pathways connected to Maximum Power Core. Awaiting command...</p>
+                <p class="text-sm leading-relaxed">System initialized. Neural pathways connected to high-speed Groq LPUs. Awaiting command...</p>
             </div>
         </div>
 
@@ -145,8 +145,8 @@
         const userInput = document.getElementById('userInput');
         const sendBtn = document.getElementById('sendBtn');
         
-        // DIRECT FASTAPI ENDPOINT (No more Gradio client!)
-        const FASTAPI_URL = "https://lord123hh-qwen-qwen3-5-35b-a3b.hf.space"; 
+        // DIRECT FASTAPI ENDPOINT FOR HUGGING FACE
+        const FASTAPI_URL = "https://lord123hh-shsj.hf.space/chat"; 
         
         // Memory Array for FastAPI format
         let chatHistory = []; 
@@ -188,13 +188,13 @@
 
                 chatBox.scrollTop = chatBox.scrollHeight;
                 
-                // Save context format specifically for Gemini/FastAPI
+                // Save context format specifically for Groq
                 chatHistory.push({ role: "user", content: text });
-                chatHistory.push({ role: "model", content: fullResponse });
+                chatHistory.push({ role: "assistant", content: fullResponse });
 
             } catch (err) {
                 console.error("Detailed Error:", err);
-                aiBubbleElement.innerText = `ERROR: Backend offline or unreachable. Check Hugging Face logs.`;
+                aiBubbleElement.innerText = `ERROR: Backend offline or unreachable. Check Hugging Face Space logs.`;
             }
         }
 
