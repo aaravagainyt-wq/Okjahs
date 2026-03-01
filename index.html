@@ -23,7 +23,6 @@
             height: 100vh;
         }
 
-        /* Glassmorphism Effect */
         .glass {
             background: rgba(255, 255, 255, 0.03);
             backdrop-filter: blur(12px);
@@ -31,7 +30,6 @@
             box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.8);
         }
 
-        /* VFX: Glowing Border Animation */
         .glow-border {
             position: relative;
         }
@@ -54,13 +52,11 @@
             100% { background-position: 0% 50%; }
         }
 
-        /* Custom Scrollbar */
         #chat-box::-webkit-scrollbar { width: 4px; }
         #chat-box::-webkit-scrollbar-thumb { background: var(--neon-cyan); border-radius: 10px; }
 
         canvas { position: fixed; top: 0; left: 0; z-index: -1; }
         
-        /* Blinking cursor effect */
         .typing-cursor::after {
             content: '█';
             animation: blink 1s step-end infinite;
@@ -69,7 +65,6 @@
         }
         @keyframes blink { 50% { opacity: 0; } }
 
-        /* Loading Animation Pulse */
         .loading-pulse {
             animation: pulse-text 1.5s infinite;
             color: var(--neon-purple);
@@ -80,7 +75,6 @@
             50% { opacity: 1; }
         }
 
-        /* Markdown Styles for the AI */
         .markdown-body p { margin-bottom: 0.5rem; }
         .markdown-body pre { background: rgba(0, 0, 0, 0.6); padding: 12px; border-radius: 8px; border: 1px solid rgba(0, 242, 255, 0.3); overflow-x: auto; margin: 8px 0; }
         .markdown-body code { font-family: monospace; color: var(--neon-purple); background: rgba(255,255,255,0.1); padding: 2px 4px; border-radius: 4px; }
@@ -98,14 +92,14 @@
         <div class="p-6 border-b border-white/10 flex justify-between items-center">
             <div>
                 <h1 class="text-xl font-bold tracking-widest text-[#00f2ff]">AARAV_AI_V1</h1>
-                <p class="text-xs text-white/50 uppercase tracking-tighter">Status: Qwen 3.5 MoE Core</p>
+                <p class="text-xs text-white/50 uppercase tracking-tighter">Status: Gemini Pro Engine Online</p>
             </div>
             <div class="h-3 w-3 rounded-full bg-cyan-400 animate-pulse shadow-[0_0_10px_#00f2ff]"></div>
         </div>
 
         <div id="chat-box" class="flex-1 overflow-y-auto p-6 space-y-4">
             <div class="bg-white/5 border border-white/10 p-4 rounded-2xl rounded-tl-none max-w-[85%]">
-                <p class="text-sm leading-relaxed">System initialized. Neural pathways connected. Awaiting command...</p>
+                <p class="text-sm leading-relaxed">System initialized. Neural pathways connected to Maximum Power Core. Awaiting command...</p>
             </div>
         </div>
 
@@ -121,9 +115,7 @@
         </div>
     </div>
 
-    <script type="module">
-        import { client } from "https://cdn.jsdelivr.net/npm/@gradio/client/dist/index.min.js";
-
+    <script>
         // --- MATRIX BACKGROUND LOGIC ---
         const canvas = document.getElementById('matrix');
         const ctx = canvas.getContext('2d');
@@ -153,61 +145,56 @@
         const userInput = document.getElementById('userInput');
         const sendBtn = document.getElementById('sendBtn');
         
-        // REPLACE WITH YOUR ACTUAL HF SPACE URL
-        const HF_SPACE_URL = "https://lord123hh-qwen-qwen3-5-35b-a3b.hf.space"; 
+        // DIRECT FASTAPI ENDPOINT (No more Gradio client!)
+        const FASTAPI_URL = "https://lord123hh-qwen-qwen3-5-35b-a3b.hf.space"; 
+        
+        // Memory Array for FastAPI format
         let chatHistory = []; 
 
         async function sendMessage() {
             const text = userInput.value.trim();
             if (!text) return;
 
-            // 1. Show User Message
             appendUserMessage(text);
             userInput.value = '';
             
-            // 2. Create AI Loading State
             const aiBubbleElement = appendEmptyAIMessage();
-            aiBubbleElement.innerHTML = `<span class="loading-pulse">Awaiting Neural Link (Handling Cold Start)...</span>`;
+            aiBubbleElement.innerHTML = `<span class="loading-pulse">Establishing Neural Link...</span>`;
 
             try {
-                // 3. Connect to Backend
-                const app = await client(HF_SPACE_URL);
-                
-                // 4. Construct ChatML Memory Structure
-                let qwenPrompt = "<|im_start|>system\nYou are Aarav AI, a high-performance assistant. Provide clear, technical, and precise answers. Write code cleanly.<|im_end|>\n";
-                for (let [pastUser, pastAi] of chatHistory) {
-                    qwenPrompt += `<|im_start|>user\n${pastUser}<|im_end|>\n<|im_start|>assistant\n${pastAi}<|im_end|>\n`;
-                }
-                qwenPrompt += `<|im_start|>user\n${text}<|im_end|>\n<|im_start|>assistant\n`;
+                // Sending direct POST request to FastAPI
+                const response = await fetch(FASTAPI_URL, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        prompt: text,
+                        history: chatHistory 
+                    })
+                });
 
-                // 5. Hard Target the Predict Endpoint
-                const result = await app.predict("/predict", [
-                    qwenPrompt
-                ]);
-
-                // 6. Clean and Render Output
-                let fullResponse = result.data[0];
-                
-                // Strip the lingering end tag if the model leaves it behind
-                if (fullResponse.includes("<|im_end|>")) {
-                    fullResponse = fullResponse.split("<|im_end|>")[0].trim();
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
                 }
 
-                // Render Markdown and update bubble
+                const data = await response.json();
+                const fullResponse = data.reply;
+
                 aiBubbleElement.innerHTML = marked.parse(fullResponse);
                 
-                // Add blinking cursor to the end of parsed HTML for effect
                 aiBubbleElement.classList.add("typing-cursor");
                 setTimeout(() => aiBubbleElement.classList.remove("typing-cursor"), 2000); 
 
                 chatBox.scrollTop = chatBox.scrollHeight;
                 
-                // Save Memory
-                chatHistory.push([text, fullResponse]);
+                // Save context format specifically for Gemini/FastAPI
+                chatHistory.push({ role: "user", content: text });
+                chatHistory.push({ role: "model", content: fullResponse });
 
             } catch (err) {
                 console.error("Detailed Error:", err);
-                aiBubbleElement.innerText = `ERROR: ${err.message || "Connection timed out. Hugging Face might be waking up the model."}`;
+                aiBubbleElement.innerText = `ERROR: Backend offline or unreachable. Check Hugging Face logs.`;
             }
         }
 
@@ -239,4 +226,3 @@
     </script>
 </body>
 </html>
-
