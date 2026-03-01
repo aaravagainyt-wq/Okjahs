@@ -131,19 +131,19 @@
         const userInput = document.getElementById('userInput');
         const sendBtn = document.getElementById('sendBtn');
         
-        // Make sure to match your exact Hugging Face space name
+        // Ensure this matches your exact Hugging Face space
         const HF_SPACE_URL = "lord123hh/shsj"; 
-        let chatHistory = []; // Keeps track of conversation
+        let chatHistory = []; 
 
         async function sendMessage() {
             const text = userInput.value.trim();
             if (!text) return;
 
-            // Display User Message UI
+            // Display User Message
             appendUserMessage(text);
             userInput.value = '';
             
-            // Create an empty AI bubble that we will update with the stream
+            // Create empty AI bubble for streaming
             const aiTextElement = appendEmptyAIMessage();
             aiTextElement.classList.add("typing-cursor");
 
@@ -151,37 +151,37 @@
                 // Connect to Hugging Face
                 const app = await client(HF_SPACE_URL);
                 
-                // Submit the request to the /chat endpoint
-                const submission = app.submit("/chat", [
+                // Submit request to the /chat endpoint
+                const stream = app.submit("/chat", [
                     text,
                     chatHistory
                 ]);
 
                 let fullResponse = "";
 
-                // Listen for streaming data chunks
-                submission.on("data", (event) => {
-                    fullResponse = event.data[0];
-                    aiTextElement.innerText = fullResponse;
-                    chatBox.scrollTop = chatBox.scrollHeight;
-                });
-
-                // When the stream finishes, update history and remove the cursor
-                submission.on("status", (status) => {
-                    if (status.stage === "complete") {
-                        aiTextElement.classList.remove("typing-cursor");
-                        chatHistory.push([text, fullResponse]);
+                // Read the stream chunks
+                for await (const event of stream) {
+                    if (event.type === "data") {
+                        fullResponse = event.data[0];
+                        aiTextElement.innerText = fullResponse;
+                        chatBox.scrollTop = chatBox.scrollHeight;
                     }
-                });
+                }
+
+                // Cleanup when stream completes
+                aiTextElement.classList.remove("typing-cursor");
+                chatHistory.push([text, fullResponse]);
 
             } catch (err) {
-                console.error(err);
+                console.error("Detailed Error:", err);
                 aiTextElement.classList.remove("typing-cursor");
-                aiTextElement.innerText = "ERROR: Connection to backend failed.";
+                
+                // Print the exact error so we can debug it if it fails
+                aiTextElement.innerText = `ERROR: ${err.message || "Failed to connect. Is the HF Space awake?"}`;
             }
         }
 
-        // Helpers for UI
+        // --- UI HELPER FUNCTIONS ---
         function appendUserMessage(text) {
             const div = document.createElement('div');
             div.className = "bg-gradient-to-r from-[#00f2ff] to-[#bc13fe] p-4 rounded-2xl rounded-tr-none ml-auto max-w-[85%] text-black font-medium shadow-lg";
@@ -200,12 +200,17 @@
             div.appendChild(p);
             chatBox.appendChild(div);
             chatBox.scrollTop = chatBox.scrollHeight;
-            return p; // Return the paragraph so we can inject text into it later
+            return p; 
         }
 
-        // Event Listeners
+        // --- EVENT LISTENERS ---
         sendBtn.addEventListener("click", sendMessage);
-        userInput.addEventListener("keypress", (e) => { if(e.key === "Enter") sendMessage(); });
+        userInput.addEventListener("keypress", (e) => { 
+            if(e.key === "Enter") {
+                e.preventDefault();
+                sendMessage(); 
+            }
+        });
     </script>
 </body>
 </html>
