@@ -3,152 +3,153 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Aarav AI | Quantum Interface</title>
+    <title>Aarav AI | Minimal Interface</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;500;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
     
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     
     <style>
-        :root {
-            --neon-cyan: #00f2ff;
-            --neon-purple: #bc13fe;
-        }
-
         body {
-            background: #050505;
-            color: #fff;
-            font-family: 'Space Grotesk', sans-serif;
+            background: #ffffff;
+            color: #000000;
+            font-family: 'Inter', sans-serif;
             overflow: hidden;
             height: 100vh;
         }
 
-        .glass {
-            background: rgba(255, 255, 255, 0.03);
-            backdrop-filter: blur(12px);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.8);
-        }
+        /* Minimalist Scrollbar */
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #e5e5e5; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #cccccc; }
 
-        .glow-border {
-            position: relative;
-        }
-        .glow-border::after {
-            content: '';
-            position: absolute;
-            inset: -2px;
-            background: linear-gradient(45deg, var(--neon-cyan), var(--neon-purple), var(--neon-cyan));
-            background-size: 400%;
-            z-index: -1;
-            filter: blur(10px);
-            opacity: 0.3;
-            animation: move 20s linear infinite;
-            border-radius: inherit;
-        }
-
-        @keyframes move {
-            0% { background-position: 0% 50%; }
-            50% { background-position: 100% 50%; }
-            100% { background-position: 0% 50%; }
-        }
-
-        #chat-box::-webkit-scrollbar { width: 4px; }
-        #chat-box::-webkit-scrollbar-thumb { background: var(--neon-cyan); border-radius: 10px; }
-
-        canvas { position: fixed; top: 0; left: 0; z-index: -1; }
+        /* Minimalist Markdown Styling */
+        .markdown-body p { margin-bottom: 0.75rem; line-height: 1.6; }
+        .markdown-body pre { background: #f5f5f5; padding: 16px; border-radius: 8px; border: 1px solid #e5e5e5; overflow-x: auto; margin: 12px 0; font-size: 0.875rem; }
+        .markdown-body code { font-family: monospace; background: #f5f5f5; padding: 2px 6px; border-radius: 4px; font-size: 0.875rem; border: 1px solid #e5e5e5; }
+        .markdown-body pre code { background: transparent; padding: 0; border: none; }
+        .markdown-body strong { font-weight: 600; }
+        .markdown-body ul { list-style-type: disc; margin-left: 24px; margin-bottom: 12px; }
         
         .typing-cursor::after {
             content: '█';
             animation: blink 1s step-end infinite;
-            color: var(--neon-cyan);
-            margin-left: 2px;
+            margin-left: 4px;
         }
         @keyframes blink { 50% { opacity: 0; } }
-
-        .loading-pulse {
-            animation: pulse-text 1.5s infinite;
-            color: var(--neon-purple);
-            font-style: italic;
-        }
-        @keyframes pulse-text {
-            0%, 100% { opacity: 0.5; }
-            50% { opacity: 1; }
-        }
-
-        .markdown-body p { margin-bottom: 0.5rem; }
-        .markdown-body pre { background: rgba(0, 0, 0, 0.6); padding: 12px; border-radius: 8px; border: 1px solid rgba(0, 242, 255, 0.3); overflow-x: auto; margin: 8px 0; }
-        .markdown-body code { font-family: monospace; color: var(--neon-purple); background: rgba(255,255,255,0.1); padding: 2px 4px; border-radius: 4px; }
-        .markdown-body pre code { color: var(--neon-cyan); background: transparent; padding: 0; }
-        .markdown-body strong { color: var(--neon-cyan); }
-        .markdown-body ul { list-style-type: disc; margin-left: 20px; margin-bottom: 8px; }
     </style>
 </head>
-<body class="flex items-center justify-center p-4">
+<body class="flex items-center justify-center p-4 antialiased">
 
-    <canvas id="matrix"></canvas>
-
-    <div class="glass glow-border w-full max-w-lg h-[85vh] rounded-3xl flex flex-col overflow-hidden">
-        
-        <div class="p-6 border-b border-white/10 flex justify-between items-center">
+    <div id="tos-modal" class="fixed inset-0 bg-white z-50 flex flex-col items-center justify-center p-6 hidden">
+        <div class="max-w-md w-full space-y-8">
             <div>
-                <h1 class="text-xl font-bold tracking-widest text-[#00f2ff]">AARAV_AI_V1</h1>
-                <p class="text-xs text-white/50 uppercase tracking-tighter">Status: Groq LPU Engine Online</p>
+                <h2 class="text-2xl font-semibold tracking-tight">Welcome to Stylus AI</h2>
+                <p class="text-gray-500 mt-2 text-sm">Before initiating the neural link, please review the safety protocols.</p>
             </div>
-            <div class="h-3 w-3 rounded-full bg-cyan-400 animate-pulse shadow-[0_0_10px_#00f2ff]"></div>
-        </div>
-
-        <div id="chat-box" class="flex-1 overflow-y-auto p-6 space-y-4">
-            <div class="bg-white/5 border border-white/10 p-4 rounded-2xl rounded-tl-none max-w-[85%]">
-                <p class="text-sm leading-relaxed">System initialized. Neural pathways connected to high-speed Groq LPUs. Awaiting command...</p>
+            
+            <div class="bg-gray-50 border border-gray-200 p-4 rounded-lg text-sm text-gray-700 h-48 overflow-y-auto space-y-3">
+                <p><strong>1. Experimental Nature:</strong> This AI model is experimental. It can and will make mistakes, hallucinate facts, or provide inaccurate code.</p>
+                <p><strong>2. No Liability:</strong> The creator of this application assumes zero liability for any damages, data loss, or legal issues arising from the use of this tool.</p>
+                <p><strong>3. Not Professional Advice:</strong> Do not use this AI for medical, legal, or financial advice.</p>
+                <p><strong>4. Data Privacy:</strong> Do not input sensitive personal data, passwords, or confidential source code.</p>
             </div>
-        </div>
 
-        <div class="p-4 bg-black/20 border-t border-white/5">
-            <div class="flex gap-2">
-                <input type="text" id="userInput" placeholder="Input command..." 
-                    class="flex-1 bg-white/5 border border-white/10 rounded-xl px-4 py-3 outline-none focus:border-[#00f2ff] transition-all text-sm">
-                <button id="sendBtn" 
-                    class="bg-[#00f2ff] text-black font-bold px-6 py-3 rounded-xl hover:scale-105 active:scale-95 transition-all shadow-[0_0_15px_#00f2ff]">
-                    EXEC
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Enter your designation (Name)</label>
+                    <input type="text" id="userNameInput" placeholder="John Doe" 
+                        class="w-full border border-gray-300 rounded-lg px-4 py-3 outline-none focus:border-black focus:ring-1 focus:ring-black transition-all">
+                </div>
+                
+                <button id="agreeBtn" 
+                    class="w-full bg-black text-white font-medium px-6 py-3 rounded-lg hover:bg-gray-800 active:scale-[0.98] transition-all">
+                    I Agree & Initialize
                 </button>
             </div>
         </div>
     </div>
 
-    <script>
-        // --- MATRIX BACKGROUND LOGIC ---
-        const canvas = document.getElementById('matrix');
-        const ctx = canvas.getContext('2d');
-        canvas.width = window.innerWidth;
-        canvas.height = window.innerHeight;
-        const letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
-        const fontSize = 16;
-        const columns = canvas.width / fontSize;
-        const drops = Array(Math.floor(columns)).fill(1);
+    <div id="main-app" class="w-full max-w-2xl h-[90vh] flex flex-col hidden opacity-0 transition-opacity duration-500">
+        
+        <div class="py-4 border-b border-gray-200 flex justify-between items-center bg-white z-10">
+            <div>
+                <h1 class="text-lg font-semibold tracking-tight">AARAV_AI_V1</h1>
+                <p class="text-xs text-gray-500 font-mono">GROQ_LPU_ENGINE :: ONLINE</p>
+            </div>
+            <div class="flex items-center gap-2">
+                <span class="text-xs text-gray-400 font-medium" id="user-display"></span>
+                <div class="h-2 w-2 rounded-full bg-black animate-pulse"></div>
+            </div>
+        </div>
 
-        function drawMatrix() {
-            ctx.fillStyle = 'rgba(0, 0, 0, 0.05)';
-            ctx.fillRect(0, 0, canvas.width, canvas.height);
-            ctx.fillStyle = '#00f2ff22';
-            ctx.font = fontSize + 'px monospace';
-            for (let i = 0; i < drops.length; i++) {
-                const text = letters.charAt(Math.floor(Math.random() * letters.length));
-                ctx.fillText(text, i * fontSize, drops[i] * fontSize);
-                if (drops[i] * fontSize > canvas.height && Math.random() > 0.975) drops[i] = 0;
-                drops[i]++;
-            }
+        <div id="chat-box" class="flex-1 overflow-y-auto py-6 space-y-6">
+            <div class="flex flex-col items-start max-w-[85%]">
+                <span class="text-xs text-gray-400 font-medium mb-1 ml-1">System</span>
+                <div class="bg-gray-50 border border-gray-100 p-4 rounded-2xl rounded-tl-sm text-gray-800">
+                    <p class="text-sm">Systems initialized. What are we building today?</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="pt-4 border-t border-gray-200 bg-white">
+            <div class="flex gap-3">
+                <input type="text" id="userInput" placeholder="Type your message..." 
+                    class="flex-1 bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 outline-none focus:border-black focus:ring-1 focus:ring-black transition-all text-sm">
+                <button id="sendBtn" 
+                    class="bg-black text-white font-medium px-6 py-3 rounded-xl hover:bg-gray-800 active:scale-[0.98] transition-all text-sm">
+                    Send
+                </button>
+            </div>
+            <div class="text-center mt-3">
+                <p class="text-[10px] text-gray-400">AI can make mistakes. Verify critical code and information.</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- ONBOARDING & TERMS LOGIC ---
+        const tosModal = document.getElementById('tos-modal');
+        const mainApp = document.getElementById('main-app');
+        const agreeBtn = document.getElementById('agreeBtn');
+        const userNameInput = document.getElementById('userNameInput');
+        const userDisplay = document.getElementById('user-display');
+        
+        let sessionUserName = "User";
+
+        // Check if user has already agreed
+        if (!localStorage.getItem('aarav_ai_agreed')) {
+            tosModal.classList.remove('hidden');
+        } else {
+            sessionUserName = localStorage.getItem('aarav_ai_username') || "User";
+            userDisplay.innerText = sessionUserName.toUpperCase();
+            showApp();
         }
-        setInterval(drawMatrix, 50);
+
+        agreeBtn.addEventListener('click', () => {
+            const name = userNameInput.value.trim() || "Anonymous";
+            localStorage.setItem('aarav_ai_agreed', 'true');
+            localStorage.setItem('aarav_ai_username', name);
+            sessionUserName = name;
+            userDisplay.innerText = name.toUpperCase();
+            
+            tosModal.classList.add('hidden');
+            showApp();
+        });
+
+        function showApp() {
+            mainApp.classList.remove('hidden');
+            // Small delay to trigger CSS fade-in
+            setTimeout(() => { mainApp.classList.remove('opacity-0'); }, 50);
+        }
 
         // --- AI CHAT LOGIC ---
         const chatBox = document.getElementById('chat-box');
         const userInput = document.getElementById('userInput');
         const sendBtn = document.getElementById('sendBtn');
         
-        // DIRECT FASTAPI ENDPOINT FOR HUGGING FACE
         const FASTAPI_URL = "https://lord123hh-shsj.hf.space/chat"; 
-        
-        // Memory Array for FastAPI format
         let chatHistory = []; 
 
         async function sendMessage() {
@@ -159,24 +160,22 @@
             userInput.value = '';
             
             const aiBubbleElement = appendEmptyAIMessage();
-            aiBubbleElement.innerHTML = `<span class="loading-pulse">Establishing Neural Link...</span>`;
+            aiBubbleElement.innerHTML = `<span class="text-gray-400 italic text-sm">Thinking...</span>`;
 
             try {
-                // Sending direct POST request to FastAPI
+                // Send name alongside the prompt so the AI knows who it is talking to
+                const contextPrompt = `[Message from ${sessionUserName}]: ${text}`;
+
                 const response = await fetch(FASTAPI_URL, {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
+                    headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
-                        prompt: text,
+                        prompt: contextPrompt,
                         history: chatHistory 
                     })
                 });
 
-                if (!response.ok) {
-                    throw new Error(`HTTP error! status: ${response.status}`);
-                }
+                if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
 
                 const data = await response.json();
                 const fullResponse = data.reply;
@@ -184,35 +183,54 @@
                 aiBubbleElement.innerHTML = marked.parse(fullResponse);
                 
                 aiBubbleElement.classList.add("typing-cursor");
-                setTimeout(() => aiBubbleElement.classList.remove("typing-cursor"), 2000); 
+                setTimeout(() => aiBubbleElement.classList.remove("typing-cursor"), 1500); 
 
                 chatBox.scrollTop = chatBox.scrollHeight;
                 
-                // Save context format specifically for Groq
-                chatHistory.push({ role: "user", content: text });
+                chatHistory.push({ role: "user", content: contextPrompt });
                 chatHistory.push({ role: "assistant", content: fullResponse });
 
             } catch (err) {
-                console.error("Detailed Error:", err);
-                aiBubbleElement.innerText = `ERROR: Backend offline or unreachable. Check Hugging Face Space logs.`;
+                console.error("Error:", err);
+                aiBubbleElement.innerHTML = `<span class="text-red-500">Error: Unable to connect to backend. Check Hugging Face logs.</span>`;
             }
         }
 
         // --- UI HELPER FUNCTIONS ---
         function appendUserMessage(text) {
-            const div = document.createElement('div');
-            div.className = "bg-gradient-to-r from-[#00f2ff] to-[#bc13fe] p-4 rounded-2xl rounded-tr-none ml-auto max-w-[85%] text-black font-medium shadow-lg";
-            div.innerHTML = `<p class="text-sm leading-relaxed">${text}</p>`;
-            chatBox.appendChild(div);
+            const wrapper = document.createElement('div');
+            wrapper.className = "flex flex-col items-end ml-auto max-w-[85%]";
+            
+            const label = document.createElement('span');
+            label.className = "text-xs text-gray-400 font-medium mb-1 mr-1";
+            label.innerText = sessionUserName;
+            
+            const bubble = document.createElement('div');
+            bubble.className = "bg-black text-white p-4 rounded-2xl rounded-tr-sm";
+            bubble.innerHTML = `<p class="text-sm">${text}</p>`;
+            
+            wrapper.appendChild(label);
+            wrapper.appendChild(bubble);
+            chatBox.appendChild(wrapper);
             chatBox.scrollTop = chatBox.scrollHeight;
         }
 
         function appendEmptyAIMessage() {
-            const div = document.createElement('div');
-            div.className = "bg-white/5 border border-white/10 p-4 rounded-2xl rounded-tl-none max-w-[85%] text-white/90 markdown-body text-sm leading-relaxed";
-            chatBox.appendChild(div);
+            const wrapper = document.createElement('div');
+            wrapper.className = "flex flex-col items-start max-w-[85%]";
+            
+            const label = document.createElement('span');
+            label.className = "text-xs text-gray-400 font-medium mb-1 ml-1";
+            label.innerText = "AARAV_AI";
+            
+            const bubble = document.createElement('div');
+            bubble.className = "bg-gray-50 border border-gray-100 p-4 rounded-2xl rounded-tl-sm text-gray-800 markdown-body text-sm w-full";
+            
+            wrapper.appendChild(label);
+            wrapper.appendChild(bubble);
+            chatBox.appendChild(wrapper);
             chatBox.scrollTop = chatBox.scrollHeight;
-            return div; 
+            return bubble; 
         }
 
         // --- EVENT LISTENERS ---
