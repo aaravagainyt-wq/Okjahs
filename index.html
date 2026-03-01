@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Aarav AI | Minimal Interface</title>
+    <title>Stylus AI | Minimal Interface</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
     
@@ -45,7 +45,7 @@
     <div id="tos-modal" class="fixed inset-0 bg-white z-50 flex flex-col items-center justify-center p-6 hidden">
         <div class="max-w-md w-full space-y-8">
             <div>
-                <h2 class="text-2xl font-semibold tracking-tight">Welcome to Stylus AI</h2>
+                <h2 class="text-2xl font-semibold tracking-tight">Welcome to STYLUS_AI</h2>
                 <p class="text-gray-500 mt-2 text-sm">Before initiating the neural link, please review the safety protocols.</p>
             </div>
             
@@ -75,7 +75,7 @@
         
         <div class="py-4 border-b border-gray-200 flex justify-between items-center bg-white z-10">
             <div>
-                <h1 class="text-lg font-semibold tracking-tight">AARAV_AI_V1</h1>
+                <h1 class="text-lg font-semibold tracking-tight">STYLUS_AI</h1>
                 <p class="text-xs text-gray-500 font-mono">GROQ_LPU_ENGINE :: ONLINE</p>
             </div>
             <div class="flex items-center gap-2">
@@ -84,14 +84,7 @@
             </div>
         </div>
 
-        <div id="chat-box" class="flex-1 overflow-y-auto py-6 space-y-6">
-            <div class="flex flex-col items-start max-w-[85%]">
-                <span class="text-xs text-gray-400 font-medium mb-1 ml-1">System</span>
-                <div class="bg-gray-50 border border-gray-100 p-4 rounded-2xl rounded-tl-sm text-gray-800">
-                    <p class="text-sm">Systems initialized. What are we building today?</p>
-                </div>
-            </div>
-        </div>
+        <div id="chat-box" class="flex-1 overflow-y-auto py-6 space-y-6"></div>
 
         <div class="pt-4 border-t border-gray-200 bg-white">
             <div class="flex gap-3">
@@ -115,37 +108,70 @@
         const agreeBtn = document.getElementById('agreeBtn');
         const userNameInput = document.getElementById('userNameInput');
         const userDisplay = document.getElementById('user-display');
+        const chatBox = document.getElementById('chat-box');
         
         let sessionUserName = "User";
 
         // Check if user has already agreed
-        if (!localStorage.getItem('aarav_ai_agreed')) {
+        if (!localStorage.getItem('stylus_ai_agreed')) {
             tosModal.classList.remove('hidden');
         } else {
-            sessionUserName = localStorage.getItem('aarav_ai_username') || "User";
+            sessionUserName = localStorage.getItem('stylus_ai_username') || "User";
             userDisplay.innerText = sessionUserName.toUpperCase();
             showApp();
+            generateGreeting(sessionUserName);
         }
 
         agreeBtn.addEventListener('click', () => {
             const name = userNameInput.value.trim() || "Anonymous";
-            localStorage.setItem('aarav_ai_agreed', 'true');
-            localStorage.setItem('aarav_ai_username', name);
+            localStorage.setItem('stylus_ai_agreed', 'true');
+            localStorage.setItem('stylus_ai_username', name);
             sessionUserName = name;
             userDisplay.innerText = name.toUpperCase();
             
             tosModal.classList.add('hidden');
             showApp();
+            generateGreeting(sessionUserName);
         });
 
         function showApp() {
             mainApp.classList.remove('hidden');
-            // Small delay to trigger CSS fade-in
             setTimeout(() => { mainApp.classList.remove('opacity-0'); }, 50);
         }
 
+        // --- DYNAMIC TIME-BASED GREETING ---
+        function generateGreeting(name) {
+            // Prevent duplicating the greeting if it's already there
+            if (chatBox.innerHTML.trim() !== "") return;
+
+            const hour = new Date().getHours();
+            let timeGreeting = "Good evening";
+            
+            if (hour >= 5 && hour < 12) {
+                timeGreeting = "Good morning";
+            } else if (hour >= 12 && hour < 17) {
+                timeGreeting = "Good afternoon";
+            }
+
+            const welcomeMessage = `${timeGreeting}, ${name}. Systems initialized. What are we building today?`;
+            
+            const wrapper = document.createElement('div');
+            wrapper.className = "flex flex-col items-start max-w-[85%]";
+            
+            const label = document.createElement('span');
+            label.className = "text-xs text-gray-400 font-medium mb-1 ml-1";
+            label.innerText = "STYLUS_AI";
+            
+            const bubble = document.createElement('div');
+            bubble.className = "bg-gray-50 border border-gray-100 p-4 rounded-2xl rounded-tl-sm text-gray-800 text-sm w-full";
+            bubble.innerHTML = `<p>${welcomeMessage}</p>`;
+            
+            wrapper.appendChild(label);
+            wrapper.appendChild(bubble);
+            chatBox.appendChild(wrapper);
+        }
+
         // --- AI CHAT LOGIC ---
-        const chatBox = document.getElementById('chat-box');
         const userInput = document.getElementById('userInput');
         const sendBtn = document.getElementById('sendBtn');
         
@@ -163,7 +189,7 @@
             aiBubbleElement.innerHTML = `<span class="text-gray-400 italic text-sm">Thinking...</span>`;
 
             try {
-                // Send name alongside the prompt so the AI knows who it is talking to
+                // Send name alongside the prompt so the AI knows contextually who is talking
                 const contextPrompt = `[Message from ${sessionUserName}]: ${text}`;
 
                 const response = await fetch(FASTAPI_URL, {
@@ -221,10 +247,10 @@
             
             const label = document.createElement('span');
             label.className = "text-xs text-gray-400 font-medium mb-1 ml-1";
-            label.innerText = "AARAV_AI";
+            label.innerText = "STYLUS_AI";
             
             const bubble = document.createElement('div');
-            bubble.className = "bg-gray-50 border border-gray-100 p-4 rounded-2xl rounded-tl-sm text-gray-800 markdown-body text-sm w-full";
+            bubble.className = "bg-gray-50 border border-gray-100 p-4 rounded-2xl rounded-tl-sm text-gray-800 markdown-body text-sm w-full overflow-x-auto";
             
             wrapper.appendChild(label);
             wrapper.appendChild(bubble);
