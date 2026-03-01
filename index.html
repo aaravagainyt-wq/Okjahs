@@ -6,6 +6,9 @@
     <title>Aarav AI | Quantum Interface</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;500;700&display=swap" rel="stylesheet">
+    
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    
     <style>
         :root {
             --neon-cyan: #00f2ff;
@@ -57,7 +60,7 @@
 
         canvas { position: fixed; top: 0; left: 0; z-index: -1; }
         
-        /* Blinking cursor effect for typing */
+        /* Blinking cursor effect */
         .typing-cursor::after {
             content: '█';
             animation: blink 1s step-end infinite;
@@ -65,6 +68,14 @@
             margin-left: 2px;
         }
         @keyframes blink { 50% { opacity: 0; } }
+
+        /* ADDED: Markdown Styles for the AI */
+        .markdown-body p { margin-bottom: 0.5rem; }
+        .markdown-body pre { background: rgba(0, 0, 0, 0.6); padding: 12px; border-radius: 8px; border: 1px solid rgba(0, 242, 255, 0.3); overflow-x: auto; margin: 8px 0; }
+        .markdown-body code { font-family: monospace; color: var(--neon-purple); background: rgba(255,255,255,0.1); padding: 2px 4px; border-radius: 4px; }
+        .markdown-body pre code { color: var(--neon-cyan); background: transparent; padding: 0; }
+        .markdown-body strong { color: var(--neon-cyan); }
+        .markdown-body ul { list-style-type: disc; margin-left: 20px; margin-bottom: 8px; }
     </style>
 </head>
 <body class="flex items-center justify-center p-4">
@@ -76,14 +87,14 @@
         <div class="p-6 border-b border-white/10 flex justify-between items-center">
             <div>
                 <h1 class="text-xl font-bold tracking-widest text-[#00f2ff]">AARAV_AI_V1</h1>
-                <p class="text-xs text-white/50 uppercase tracking-tighter">Status: Systems Online</p>
+                <p class="text-xs text-white/50 uppercase tracking-tighter">Status: Novita AI Core Online</p>
             </div>
             <div class="h-3 w-3 rounded-full bg-cyan-400 animate-pulse shadow-[0_0_10px_#00f2ff]"></div>
         </div>
 
         <div id="chat-box" class="flex-1 overflow-y-auto p-6 space-y-4">
             <div class="bg-white/5 border border-white/10 p-4 rounded-2xl rounded-tl-none max-w-[85%]">
-                <p class="text-sm leading-relaxed">System initialized. Neural pathways connected to Groq. What is our objective today?</p>
+                <p class="text-sm leading-relaxed">System initialized. Neural pathways connected to Qwen 3.5 MoE. What is our objective today?</p>
             </div>
         </div>
 
@@ -139,47 +150,43 @@
             const text = userInput.value.trim();
             if (!text) return;
 
-            // Display User Message
             appendUserMessage(text);
             userInput.value = '';
             
-            // Create empty AI bubble for streaming
             const aiTextElement = appendEmptyAIMessage();
             aiTextElement.classList.add("typing-cursor");
 
             try {
-                // Connect to Hugging Face
                 const app = await client(HF_SPACE_URL);
                 
-                // Submit request to the explicitly defined /aarav_stream endpoint
-                const stream = app.submit("/aarav_stream", [
-                    text,
-                    chatHistory
+                // --- CHATML FORMATTING ---
+                // Since gr.load expects a single string, we manually inject the history
+                // using Qwen's specific ChatML tags so it perfectly remembers context.
+                let qwenPrompt = "<|im_start|>system\nYou are Aarav AI, a high-performance assistant. Use sharp, intense language. Keep it brief.<|im_end|>\n";
+                for (let [pastUser, pastAi] of chatHistory) {
+                    qwenPrompt += `<|im_start|>user\n${pastUser}<|im_end|>\n<|im_start|>assistant\n${pastAi}<|im_end|>\n`;
+                }
+                qwenPrompt += `<|im_start|>user\n${text}<|im_end|>\n<|im_start|>assistant\n`;
+
+                // Submit request to index 0 (the default API route for gr.load)
+                const result = await app.predict(0, [
+                    qwenPrompt
                 ]);
 
-                let fullResponse = "";
+                // Strip out trailing tags if the API leaves them behind
+                let fullResponse = result.data[0].replace(/<\|im_end\|>/g, "").trim();
 
-                // Read the stream chunks
-                for await (const event of stream) {
-                    if (event.type === "data") {
-                        // The raw API returns the string in the first index
-                        fullResponse = event.data[0]; 
-                        aiTextElement.innerText = fullResponse;
-                        chatBox.scrollTop = chatBox.scrollHeight;
-                    }
-                }
-
-                // Cleanup when stream completes
+                // Remove cursor and inject the parsed Markdown text
                 aiTextElement.classList.remove("typing-cursor");
-                // Save to history so the AI remembers context
+                aiTextElement.innerHTML = marked.parse(fullResponse);
+                chatBox.scrollTop = chatBox.scrollHeight;
+
                 chatHistory.push([text, fullResponse]);
 
             } catch (err) {
                 console.error("Detailed Error:", err);
                 aiTextElement.classList.remove("typing-cursor");
-                
-                // Print the exact error so we can debug it if it fails
-                aiTextElement.innerText = `ERROR: ${err.message || "Failed to connect to the backend."}`;
+                aiTextElement.innerText = `ERROR: ${err.message || "Backend offline."}`;
             }
         }
 
@@ -194,15 +201,11 @@
 
         function appendEmptyAIMessage() {
             const div = document.createElement('div');
-            div.className = "bg-white/5 border border-white/10 p-4 rounded-2xl rounded-tl-none max-w-[85%] text-white/90";
-            
-            const p = document.createElement('p');
-            p.className = "text-sm leading-relaxed";
-            
-            div.appendChild(p);
+            // Added the markdown-body class to style the marked.js output
+            div.className = "bg-white/5 border border-white/10 p-4 rounded-2xl rounded-tl-none max-w-[85%] text-white/90 markdown-body text-sm leading-relaxed";
             chatBox.appendChild(div);
             chatBox.scrollTop = chatBox.scrollHeight;
-            return p; 
+            return div; 
         }
 
         // --- EVENT LISTENERS ---
