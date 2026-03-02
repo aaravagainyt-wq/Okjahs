@@ -1,409 +1,336 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="dark">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Fase AI - Ultimate Build</title>
+    <title>Fase Ultra | Multimodal AI OS</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Inter:wght@300;400;600;800&display=swap" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.0.6/purify.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css">
+    
     <style>
-        body { background: #ffffff; color: #000000; font-family: 'Inter', sans-serif; overflow: hidden; height: 100dvh; display: flex; }
+        :root { --accent: #3b82f6; --bg: #050505; --panel: #111111; --border: #222222; }
+        body { background: var(--bg); color: #e5e5e5; font-family: 'Inter', sans-serif; overflow: hidden; height: 100dvh; }
+        .mono { font-family: 'JetBrains Mono', monospace; }
+        
+        /* Layout Grid */
+        .app-grid { display: grid; grid-template-columns: 280px 1fr 400px; height: 100vh; }
+        @media (max-width: 1280px) { .app-grid { grid-template-columns: 80px 1fr; } .right-panel { display: none; } }
+        @media (max-width: 768px) { .app-grid { grid-template-columns: 1fr; } .left-panel { display: none; } }
+
+        /* Custom Scrollbar */
         ::-webkit-scrollbar { width: 4px; height: 4px; }
-        ::-webkit-scrollbar-track { background: transparent; }
-        ::-webkit-scrollbar-thumb { background: #e5e5e5; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb { background: #333; border-radius: 10px; }
         
-        .markdown-body p { margin-bottom: 0.75rem; line-height: 1.5; }
-        .markdown-body pre { background: #f5f5f5; padding: 12px; border-radius: 8px; border: 1px solid #e5e5e5; overflow-x: auto; margin: 8px 0; font-size: 0.85rem; }
-        .markdown-body code { font-family: monospace; background: #f5f5f5; padding: 2px 4px; border-radius: 4px; font-size: 0.85rem; }
-        .markdown-body pre code { background: transparent; padding: 0; }
+        /* Components */
+        .glass-panel { background: var(--panel); border: 1px solid var(--border); }
+        .chat-user { background: var(--accent); color: white; border-radius: 18px 18px 2px 18px; }
+        .chat-ai { background: #1a1a1a; border: 1px solid var(--border); border-radius: 18px 18px 18px 2px; }
+        .btn-tool { @apply p-2 rounded-lg hover:bg-zinc-800 transition-all flex items-center gap-3 text-sm text-zinc-400 hover:text-white; }
+        .active-tool { color: var(--accent) !important; background: #1d4ed81a; border: 1px solid #1d4ed833; }
         
-        .model-active { background-color: #000; color: #fff; border-color: #000; }
-        .model-inactive { background-color: #fff; color: #666; border-color: #e5e5e5; }
-        
-        #sidebar { transition: transform 0.3s ease-in-out; }
-        .sidebar-open { transform: translateX(0); }
-        .sidebar-closed { transform: translateX(-100%); }
-        @media (min-width: 768px) { .sidebar-closed { transform: translateX(0); } }
-        
+        /* Animations */
+        @keyframes pulse-border { 0% { border-color: #222; } 50% { border-color: var(--accent); } 100% { border-color: #222; } }
+        .analyzing { animation: pulse-border 2s infinite; }
         .spinner { animation: spin 1s linear infinite; }
         @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
-
-        /* Toast Animation */
-        #toast-container { transition: transform 0.3s ease-in-out, opacity 0.3s; transform: translateY(-100%); opacity: 0; }
-        .toast-show { transform: translateY(0) !important; opacity: 1 !important; }
+        
+        /* Markdown Overrides */
+        .markdown-body pre { background: #000 !important; border: 1px solid #333; padding: 1rem; border-radius: 8px; margin: 1rem 0; }
+        .markdown-body code { color: #f87171; background: #222; padding: 2px 4px; border-radius: 4px; }
+        .markdown-body table { width: 100%; border-collapse: collapse; margin: 1rem 0; }
+        .markdown-body th, .markdown-body td { border: 1px solid #333; padding: 8px; text-align: left; }
     </style>
 </head>
-<body class="antialiased relative">
+<body>
 
-    <div id="toast-container" class="fixed top-4 left-0 right-0 z-[100] flex justify-center pointer-events-none">
-        <div id="toast-message" class="bg-red-600 text-white px-4 py-3 rounded-xl shadow-lg font-medium text-sm max-w-sm mx-4 text-center">
-            Error message here.
-        </div>
-    </div>
-
-    <div id="main-app" class="w-full h-full flex relative">
-        <div id="sidebar-backdrop" onclick="toggleSidebar()" class="fixed inset-0 bg-black/20 z-40 hidden md:hidden"></div>
-
-        <div id="sidebar" class="sidebar-closed absolute md:relative z-50 w-64 h-full bg-gray-50 border-r border-gray-200 flex flex-col shrink-0 shadow-xl md:shadow-none">
-            <div class="p-4 border-b border-gray-200 flex justify-between items-center bg-white">
-                <h1 class="text-lg font-bold tracking-tight">Fase System</h1>
-                <button onclick="toggleSidebar()" class="md:hidden p-2 text-gray-500 hover:text-black">
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
-                </button>
-            </div>
-            
-            <div class="p-3 space-y-2 border-b border-gray-200">
-                <button onclick="createNewChat()" class="w-full bg-black text-white text-sm font-medium py-2.5 rounded-lg hover:bg-gray-800 transition-all flex items-center justify-center gap-2 shadow-sm">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
-                    New Chat
-                </button>
-                <button onclick="nukeStorage()" class="w-full bg-white border border-red-200 text-red-600 text-sm font-medium py-2 rounded-lg hover:bg-red-50 transition-all flex items-center justify-center gap-2">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
-                    Reset System Cache
-                </button>
+    <div class="app-grid">
+        
+        <aside class="left-panel glass-panel flex flex-col p-4 z-50">
+            <div class="flex items-center gap-3 mb-8 px-2">
+                <div class="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center font-black text-white">F</div>
+                <h1 class="text-lg font-bold tracking-tighter">FASE ULTRA</h1>
             </div>
 
-            <div id="sidebar-history" class="flex-1 overflow-y-auto p-3 space-y-1"></div>
-            
-            <div class="p-4 border-t border-gray-200 text-xs text-gray-500 bg-white">
-                Status: <span id="server-status" class="font-semibold text-green-600">Online</span>
-            </div>
-        </div>
-
-        <div class="flex-1 flex flex-col min-w-0 bg-white relative h-full">
-            <div class="p-3 sm:p-4 border-b border-gray-200 flex justify-between items-center bg-white/95 backdrop-blur-sm z-10 shrink-0">
-                <div class="flex items-center gap-3">
-                    <button onclick="toggleSidebar()" class="md:hidden p-1 text-gray-600 hover:text-black">
-                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path></svg>
-                    </button>
-                    <span class="font-bold tracking-tight md:hidden">Fase</span>
-                </div>
+            <nav class="flex-1 space-y-1">
+                <p class="text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-2 px-2">Core Systems</p>
+                <button onclick="setMode('chat')" id="m-chat" class="btn-tool w-full active-tool"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"></path></svg> Neural Chat</button>
+                <button onclick="setMode('research')" id="m-research" class="btn-tool w-full"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg> Real-time Research</button>
+                <button onclick="setMode('vision')" id="m-vision" class="btn-tool w-full"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path><path d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path></svg> Vision Lab</button>
                 
-                <div class="flex items-center p-1 bg-gray-100 rounded-lg overflow-x-auto hide-scrollbar max-w-[60vw]">
-                    <button onclick="setModel('flash')" id="btn-flash" class="px-4 py-1.5 text-xs font-semibold rounded-md border model-inactive shrink-0 transition-colors">Flash</button>
-                    <button onclick="setModel('pro')" id="btn-pro" class="px-4 py-1.5 text-xs font-semibold rounded-md border model-active shrink-0 transition-colors">Pro</button>
-                    <button onclick="setModel('thinking')" id="btn-thinking" class="px-4 py-1.5 text-xs font-semibold rounded-md border model-inactive shrink-0 transition-colors">Thinking</button>
+                <p class="text-[10px] font-bold text-zinc-500 uppercase tracking-widest mt-8 mb-2 px-2">Creative & Analysis</p>
+                <button onclick="setMode('code')" id="m-code" class="btn-tool w-full"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"></path></svg> IDE Terminal</button>
+                <button onclick="setMode('math')" id="m-math" class="btn-tool w-full"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 12h.01M12 12h.01M15 12h.01M12 7h.01"></path></svg> Math Solver</button>
+                <button onclick="setMode('media')" id="m-media" class="btn-tool w-full"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"></path><path d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg> Media Studio</button>
+            </nav>
+
+            <div class="mt-auto pt-4 border-t border-zinc-800 space-y-4">
+                <div class="bg-zinc-900 rounded-xl p-3">
+                    <p class="text-[10px] text-zinc-500 mb-1">CURRENT MODEL</p>
+                    <p id="model-status" class="text-xs font-bold text-blue-400">Gemini 2.0 Flash</p>
+                </div>
+                <button onclick="nukeStorage()" class="text-[10px] text-red-500 hover:text-red-400 transition-colors">Wipe All Local Data</button>
+            </div>
+        </aside>
+
+        <main class="flex flex-col relative min-w-0 border-r border-zinc-800">
+            <header class="p-4 border-b border-zinc-800 flex justify-between items-center bg-black/50 backdrop-blur-md">
+                <div class="flex items-center gap-2">
+                    <span id="active-mode-title" class="text-sm font-bold uppercase tracking-widest text-zinc-400">Neural Chat</span>
+                </div>
+                <div class="flex gap-2">
+                    <div class="h-2 w-2 rounded-full bg-green-500 animate-pulse"></div>
+                    <span class="text-[10px] text-zinc-500 font-bold uppercase">System Ready</span>
+                </div>
+            </header>
+
+            <div id="chat-box" class="flex-1 overflow-y-auto p-4 sm:p-8 space-y-8 pb-32">
+                <div class="chat-ai max-w-[90%] p-6">
+                    <h2 class="text-xl font-bold mb-2">Welcome to Fase Ultra v5.0</h2>
+                    <p class="text-sm text-zinc-400 leading-relaxed">Multimodal systems are online. You can upload <strong>Images, Audio, Video, or PDFs</strong>. Switch to Research mode for real-time web access or IDE for coding.</p>
                 </div>
             </div>
 
-            <div id="chat-box" class="flex-1 overflow-y-auto p-4 sm:p-6 space-y-6 pb-4"></div>
-
-            <div class="w-full bg-white border-t border-gray-200 p-3 shrink-0 pb-safe">
-                <div id="imagePreviewContainer" class="hidden mb-2 relative inline-block">
-                    <img id="imagePreview" src="" class="h-14 w-14 object-cover rounded-lg border-2 border-black shadow-sm">
-                    <button onclick="clearImage()" class="absolute -top-2 -right-2 bg-black text-white rounded-full w-6 h-6 flex items-center justify-center text-sm shadow-md hover:scale-110 transition-transform">×</button>
+            <div class="absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-black via-black to-transparent">
+                <div id="file-tray" class="hidden mb-2 flex items-center gap-2 bg-zinc-900 p-2 rounded-xl border border-blue-500/30">
+                    <div id="file-icon" class="p-2 bg-blue-600 rounded-lg text-white"></div>
+                    <div class="flex-1 min-w-0">
+                        <p id="file-name" class="text-xs font-bold truncate">filename.pdf</p>
+                        <p id="file-info" class="text-[10px] text-zinc-500 uppercase">PDF Document</p>
+                    </div>
+                    <button onclick="clearFile()" class="p-2 text-zinc-400 hover:text-white">×</button>
                 </div>
-                
-                <div class="flex items-end gap-2 max-w-4xl mx-auto">
-                    <label class="cursor-pointer p-3 bg-gray-50 border border-gray-200 rounded-xl hover:bg-gray-100 text-gray-600 shrink-0 mb-[1px] transition-colors">
-                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
-                        <input type="file" id="imageInput" accept="image/*" class="hidden" onchange="handleImageSelect(event)">
+
+                <div class="max-w-4xl mx-auto glass-panel rounded-2xl p-2 flex items-end gap-2 shadow-2xl transition-all focus-within:ring-1 focus-within:ring-blue-500/50" id="input-container">
+                    <label class="p-3 cursor-pointer text-zinc-500 hover:text-blue-500 transition-colors">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+                        <input type="file" id="global-uploader" class="hidden" onchange="handleUploader(event)">
                     </label>
-
-                    <input type="text" id="userInput" placeholder="Message Fase..." class="flex-1 bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 outline-none focus:border-black focus:ring-1 focus:ring-black text-sm h-[50px] transition-all">
                     
-                    <button id="sendBtn" class="bg-black text-white font-medium px-6 py-3 rounded-xl hover:bg-gray-800 text-sm h-[50px] shrink-0 flex items-center justify-center min-w-[80px] transition-colors">
-                        <span id="sendBtnText">Send</span>
-                        <svg id="sendBtnLoader" class="hidden spinner w-5 h-5 text-white" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+                    <textarea id="user-input" rows="1" placeholder="Type message or upload multimodal data..." 
+                        class="flex-1 bg-transparent border-none p-3 text-sm focus:ring-0 outline-none resize-none max-h-48"
+                        oninput="this.style.height = ''; this.style.height = this.scrollHeight + 'px'"></textarea>
+                    
+                    <button id="send-btn" onclick="executeTask()" class="bg-blue-600 text-white p-3 rounded-xl hover:bg-blue-700 transition-all flex items-center justify-center min-w-[50px]">
+                        <span id="btn-icon"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 5l7 7-7 7M5 5l7 7-7 7"></path></svg></span>
+                        <svg id="btn-spinner" class="hidden w-5 h-5 spinner" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
                     </button>
                 </div>
             </div>
-        </div>
+        </main>
+
+        <aside class="right-panel flex flex-col glass-panel border-l border-zinc-800 overflow-hidden">
+            <div class="flex border-b border-zinc-800">
+                <button onclick="setRightTab('ide')" id="t-ide" class="flex-1 p-3 text-[10px] font-bold uppercase tracking-widest text-zinc-500 border-b-2 border-blue-600 text-blue-500">IDE</button>
+                <button onclick="setRightTab('analysis')" id="t-analysis" class="flex-1 p-3 text-[10px] font-bold uppercase tracking-widest text-zinc-500 border-b-2 border-transparent">Analysis</button>
+                <button onclick="setRightTab('assets')" id="t-assets" class="flex-1 p-3 text-[10px] font-bold uppercase tracking-widest text-zinc-500 border-b-2 border-transparent">Assets</button>
+            </div>
+
+            <div id="pane-ide" class="flex-1 flex flex-col overflow-hidden">
+                <div class="bg-black/50 p-2 flex justify-between items-center border-b border-zinc-800">
+                    <span class="text-[10px] mono text-zinc-600">fase_scratchpad.py</span>
+                    <button onclick="copyIDE()" class="text-[10px] bg-zinc-800 hover:bg-zinc-700 px-2 py-1 rounded">COPY</button>
+                </div>
+                <pre class="flex-1 p-4 overflow-auto mono text-xs leading-relaxed"><code id="ide-display" class="language-python"># AI Generated Code will appear here...
+def hello_fase():
+    print("System Initialized")</code></pre>
+            </div>
+
+            <div id="pane-analysis" class="hidden flex-1 p-4 space-y-6 overflow-auto">
+                <div class="space-y-2">
+                    <p class="text-[10px] font-bold text-zinc-500 uppercase">Token Usage</p>
+                    <div class="w-full bg-zinc-800 h-1 rounded-full overflow-hidden">
+                        <div class="bg-blue-600 h-full w-[12%]"></div>
+                    </div>
+                </div>
+                <div class="glass-panel p-4 rounded-xl space-y-4">
+                    <p class="text-xs font-bold">SENTIMENT ANALYSIS</p>
+                    <div class="flex justify-between items-center">
+                        <span class="text-xs text-zinc-400">Tone</span>
+                        <span class="text-xs font-bold text-green-500">Productive</span>
+                    </div>
+                </div>
+                <div id="data-explorer" class="space-y-4">
+                    <p class="text-[10px] font-bold text-zinc-500 uppercase">Data Extracted</p>
+                    <div class="text-[10px] text-zinc-600 italic">No structured data found in last message.</div>
+                </div>
+            </div>
+        </aside>
+
     </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-python.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-javascript.min.js"></script>
 
     <script>
-        // --- CONFIGURATION ---
-        const FASTAPI_URL = "https://lord123hh-shsj.hf.space/chat"; 
+        // CONFIG
+        const API_URL = "https://lord123hh-shsj.hf.space/chat";
         
-        // --- STATE ---
-        let activeModel = "pro";
-        let currentImageBase64 = null;
-        let chats = JSON.parse(localStorage.getItem('fase_chats')) || [];
-        let activeChatId = null;
-
-        // --- DOM ELEMENTS ---
-        const chatBox = document.getElementById('chat-box');
-        const sidebarHistory = document.getElementById('sidebar-history');
-        const sidebar = document.getElementById('sidebar');
-        const sidebarBackdrop = document.getElementById('sidebar-backdrop');
-        const sendBtnText = document.getElementById('sendBtnText');
-        const sendBtnLoader = document.getElementById('sendBtnLoader');
-        const sendBtn = document.getElementById('sendBtn');
-        const toastContainer = document.getElementById('toast-container');
-        const toastMessage = document.getElementById('toast-message');
-
-        // Fallback for Markdown parser
-        if(typeof marked === "undefined"){ window.marked = { parse: (t) => t }; }
-
-        // --- INITIALIZATION ---
-        function initApp() {
-            if (chats.length === 0) createNewChat();
-            else loadChat(chats[0].id);
-            renderSidebar();
-        }
-
-        // --- CORE UI FUNCTIONS ---
-        function showToast(message, duration = 4000) {
-            toastMessage.innerText = message;
-            toastContainer.classList.add('toast-show');
-            setTimeout(() => {
-                toastContainer.classList.remove('toast-show');
-            }, duration);
-        }
-
-        function toggleSidebar() {
-            const isOpen = sidebar.classList.contains('sidebar-open');
-            if (isOpen) {
-                sidebar.classList.remove('sidebar-open', 'shadow-2xl');
-                sidebar.classList.add('sidebar-closed');
-                sidebarBackdrop.classList.add('hidden');
+        // STATE
+        let activeMode = 'chat';
+        let currentFile = { data: null, mime: null, name: null };
+        let chatHistory = JSON.parse(localStorage.getItem('fase_history_v5')) || [];
+        
+        // CORE ROUTER
+        function setMode(mode) {
+            activeMode = mode;
+            document.querySelectorAll('.btn-tool').forEach(b => b.classList.remove('active-tool'));
+            document.getElementById(`m-${mode}`).classList.add('active-tool');
+            document.getElementById('active-mode-title').innerText = mode.toUpperCase() + (mode === 'chat' ? ' Neural Chat' : '');
+            
+            // Logic for specialized modes
+            if(mode === 'research') {
+                document.getElementById('model-status').innerText = "Gemini 2.0 + Search";
+                document.getElementById('input-container').classList.add('analyzing');
             } else {
-                sidebar.classList.remove('sidebar-closed');
-                sidebar.classList.add('sidebar-open', 'shadow-2xl');
-                sidebarBackdrop.classList.remove('hidden');
+                document.getElementById('model-status').innerText = "Gemini 2.0 Flash";
+                document.getElementById('input-container').classList.remove('analyzing');
             }
         }
 
-        function setModel(modelName) {
-            activeModel = modelName;
-            document.querySelectorAll('[id^="btn-"]').forEach(btn => {
-                btn.classList.remove('model-active');
-                btn.classList.add('model-inactive');
+        // TAB SYSTEM
+        function setRightTab(tab) {
+            ['ide', 'analysis', 'assets'].forEach(t => {
+                document.getElementById(`pane-${t}`).classList.add('hidden');
+                document.getElementById(`t-${t}`).classList.remove('border-blue-600', 'text-blue-500');
             });
-            const activeBtn = document.getElementById(`btn-${modelName}`);
-            activeBtn.classList.remove('model-inactive');
-            activeBtn.classList.add('model-active');
+            document.getElementById(`pane-${tab}`).classList.remove('hidden');
+            document.getElementById(`t-${tab}`).classList.add('border-blue-600', 'text-blue-500');
         }
 
-        function nukeStorage() {
-            if(confirm("CRITICAL: This will delete all chat history and reset the app. Are you sure?")) {
-                localStorage.removeItem('fase_chats');
-                chats = [];
-                chatBox.innerHTML = '';
-                createNewChat();
-                showToast("System cache cleared successfully.");
-            }
-        }
-
-        // --- IMAGE HANDLING PIPELINE ---
-        function handleImageSelect(event) {
-            const file = event.target.files[0];
+        // MULTIMODAL UPLOADER
+        function handleUploader(e) {
+            const file = e.target.files[0];
             if (!file) return;
 
             const reader = new FileReader();
-            reader.onload = function(e) {
-                const img = new Image();
-                img.onload = function() {
-                    const canvas = document.createElement('canvas');
-                    // STRICT COMPRESSION to prevent API crashes
-                    const MAX_WIDTH = 512;
-                    const MAX_HEIGHT = 512;
-                    let width = img.width;
-                    let height = img.height;
-
-                    if (width > height) {
-                        if (width > MAX_WIDTH) { height *= MAX_WIDTH / width; width = MAX_WIDTH; }
-                    } else {
-                        if (height > MAX_HEIGHT) { width *= MAX_HEIGHT / height; height = MAX_HEIGHT; }
-                    }
-
-                    canvas.width = width;
-                    canvas.height = height;
-                    const ctx = canvas.getContext('2d');
-                    ctx.drawImage(img, 0, 0, width, height);
-
-                    currentImageBase64 = canvas.toDataURL('image/jpeg', 0.6);
-                    document.getElementById('imagePreview').src = currentImageBase64;
-                    document.getElementById('imagePreviewContainer').classList.remove('hidden');
-                };
-                img.src = e.target.result;
+            reader.onload = (f) => {
+                currentFile = { data: f.target.result, mime: file.type, name: file.name };
+                document.getElementById('file-name').innerText = file.name;
+                document.getElementById('file-tray').classList.remove('hidden');
+                
+                // Icon Logic
+                let icon = '📄';
+                if(file.type.includes('image')) icon = '🖼️';
+                if(file.type.includes('video')) icon = '🎬';
+                if(file.type.includes('audio')) icon = '🎵';
+                document.getElementById('file-icon').innerText = icon;
+                document.getElementById('file-info').innerText = file.type.split('/')[1].toUpperCase();
             };
             reader.readAsDataURL(file);
         }
 
-        function clearImage() {
-            currentImageBase64 = null;
-            document.getElementById('imageInput').value = "";
-            document.getElementById('imagePreviewContainer').classList.add('hidden');
+        function clearFile() {
+            currentFile = { data: null, mime: null, name: null };
+            document.getElementById('file-tray').classList.add('hidden');
+            document.getElementById('global-uploader').value = '';
         }
 
-        // --- CHAT STATE MANAGEMENT ---
-        function createNewChat() {
-            const newChat = { id: Date.now().toString(), title: "New Conversation", messages: [] };
-            chats.unshift(newChat);
-            saveChats();
-            loadChat(newChat.id);
-            renderSidebar();
-            if(window.innerWidth < 768 && sidebar.classList.contains('sidebar-open')) toggleSidebar();
-        }
-
-        function loadChat(chatId) {
-            activeChatId = chatId;
-            chatBox.innerHTML = '';
-            const chat = chats.find(c => c.id === chatId);
+        // UI RENDERING
+        function appendMessage(role, text, file = null) {
+            const box = document.getElementById('chat-box');
+            const wrap = document.createElement('div');
+            wrap.className = `flex flex-col ${role === 'user' ? 'items-end' : 'items-start'}`;
             
-            if (chat && chat.messages.length > 0) {
-                chat.messages.forEach(msg => {
-                    if(msg.role === 'user') appendUserMessage(msg.content, msg.image);
-                    else appendAIMessage(msg.content);
-                });
-            } else {
-                appendAIMessage("Systems initialized. Fase is ready.");
-            }
-            renderSidebar();
-            if(window.innerWidth < 768 && sidebar.classList.contains('sidebar-open')) toggleSidebar();
-        }
+            const label = document.createElement('span');
+            label.className = "text-[10px] font-bold text-zinc-600 mb-1 px-2 uppercase tracking-widest";
+            label.innerText = role === 'user' ? 'Aarav' : 'Fase Core';
 
-        function saveChats() { localStorage.setItem('fase_chats', JSON.stringify(chats)); }
-
-        function renderSidebar() {
-            sidebarHistory.innerHTML = '';
-            chats.forEach(chat => {
-                const btn = document.createElement('button');
-                const isActive = chat.id === activeChatId;
-                btn.className = `w-full text-left px-4 py-2.5 mt-1 rounded-lg text-sm truncate transition-colors border ${isActive ? 'bg-black text-white border-black' : 'bg-white text-gray-700 border-transparent hover:bg-gray-100 hover:border-gray-200'}`;
-                btn.innerText = chat.title;
-                btn.onclick = () => loadChat(chat.id);
-                sidebarHistory.appendChild(btn);
-            });
-        }
-
-        // --- API COMMUNICATION ---
-        function setSendingState(isSending) {
-            if (isSending) {
-                sendBtn.disabled = true;
-                sendBtnText.classList.add('hidden');
-                sendBtnLoader.classList.remove('hidden');
-            } else {
-                sendBtn.disabled = false;
-                sendBtnText.classList.remove('hidden');
-                sendBtnLoader.classList.add('hidden');
-            }
-        }
-
-        async function sendMessage() {
-            const text = document.getElementById('userInput').value.trim();
-            const hasImage = currentImageBase64 !== null;
-            if (!text && !hasImage) return;
-
-            setSendingState(true);
-
-            const currentChat = chats.find(c => c.id === activeChatId);
-            if (currentChat.messages.length === 0) {
-                currentChat.title = text ? text.substring(0, 20) + "..." : "Image Analysis";
-                renderSidebar();
-            }
-
-            // 1. Render User Message immediately
-            appendUserMessage(text, currentImageBase64);
-            const savedImage = currentImageBase64; 
+            const bubble = document.createElement('div');
+            bubble.className = `p-4 text-sm leading-relaxed max-w-[85%] sm:max-w-[70%] ${role === 'user' ? 'chat-user' : 'chat-ai shadow-lg'} markdown-body`;
             
-            // 2. Clear Inputs immediately for good UX
-            document.getElementById('userInput').value = '';
-            clearImage();
+            if (file && file.mime.includes('image')) {
+                bubble.innerHTML += `<img src="${file.data}" class="max-w-full rounded-lg mb-4 border border-white/10 shadow-xl">`;
+            } else if (file) {
+                bubble.innerHTML += `<div class="bg-black/20 p-2 rounded text-[10px] mb-4 border border-white/5 uppercase">📎 ${file.name}</div>`;
+            }
 
-            // 3. Prepare AI Bubble
-            const aiBubble = createEmptyAIBubble();
-            aiBubble.innerHTML = `<span class="text-gray-400 italic text-sm animate-pulse flex items-center gap-2"><svg class="w-4 h-4 spinner" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg> Processing...</span>`;
+            bubble.innerHTML += DOMPurify.sanitize(marked.parse(text));
+            
+            wrap.appendChild(label);
+            wrap.appendChild(bubble);
+            box.appendChild(wrap);
+            box.scrollTop = box.scrollHeight;
+
+            // AUTO-IDE EXTRACTION
+            const codeMatch = text.match(/```(?:python|javascript|js|py)?\n([\s\S]+?)\n```/i);
+            if(codeMatch) {
+                document.getElementById('ide-display').innerText = codeMatch[1];
+                Prism.highlightAll();
+                setRightTab('ide');
+            }
+        }
+
+        // CORE EXECUTION
+        async function executeTask() {
+            const input = document.getElementById('user-input');
+            const prompt = input.value.trim();
+            if (!prompt && !currentFile.data) return;
+
+            setLoading(true);
+            appendMessage('user', prompt || `Analyzing ${currentFile.name}...`, {...currentFile});
+            
+            const payload = {
+                prompt: prompt || "Explain this file content.",
+                history: chatHistory.slice(-10),
+                model_tier: activeMode === 'research' ? 'research' : 'pro',
+                file_data: currentFile.data,
+                file_mime: currentFile.mime
+            };
+
+            input.value = '';
+            input.style.height = 'auto';
+            const savedFile = {...currentFile};
+            clearFile();
 
             try {
-                // Strip images from history to prevent payload bloat
-                const apiHistory = currentChat.messages.map(m => ({
-                    role: m.role,
-                    content: m.content || "Attached an image."
-                }));
-
-                const payload = { 
-                    prompt: text || "Analyze this image.", 
-                    history: apiHistory, 
-                    model_tier: activeModel, 
-                    image_base64: savedImage 
-                };
-
-                // Add current message to history AFTER building API payload
-                currentChat.messages.push({ role: "user", content: text, image: savedImage });
-
-                // Execute Fetch
-                const response = await fetch(FASTAPI_URL, {
+                const response = await fetch(API_URL, {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: {'Content-Type': 'application/json'},
                     body: JSON.stringify(payload)
                 });
 
-                if (!response.ok) {
-                    const errorData = await response.json().catch(() => ({}));
-                    throw new Error(errorData.detail || `Server Error ${response.status}`);
-                }
-
-                const data = await response.json();
+                if(!response.ok) throw new Error("Backend connection failed.");
                 
-                // Render and Save
-                aiBubble.innerHTML = DOMPurify.sanitize(marked.parse(data.reply || "No response."));
-                currentChat.messages.push({ role: "assistant", content: data.reply });
-                saveChats();
+                const data = await response.json();
+                appendMessage('ai', data.reply);
+                
+                // SAVE HISTORY
+                chatHistory.push({role: 'user', content: prompt || "Multimodal Upload"});
+                chatHistory.push({role: 'assistant', content: data.reply});
+                localStorage.setItem('fase_history_v5', JSON.stringify(chatHistory.slice(-20)));
 
             } catch (err) {
-                // UI Error Handling
-                aiBubble.innerHTML = `<div class="text-red-600 bg-red-50 p-3 rounded-lg text-sm border border-red-200">
-                    <strong>Connection Failed</strong><br>
-                    <span class="text-gray-600 mt-1 block">${err.message}</span>
-                </div>`;
-                showToast(`API Error: ${err.message}`);
-                
-                // Rollback history so user can try again
-                currentChat.messages.pop(); 
+                appendMessage('ai', `**Critical System Error:** ${err.message}. Ensure your Hugging Face Space is active.`);
             } finally {
-                setSendingState(false);
+                setLoading(false);
             }
         }
 
-        // --- MESSAGE RENDERING ---
-        function appendUserMessage(text, imageBase64 = null) {
-            const wrapper = document.createElement('div');
-            wrapper.className = "flex flex-col items-end ml-auto max-w-[90%] sm:max-w-[80%]";
-            const label = document.createElement('span');
-            label.className = "text-[10px] text-gray-400 font-bold tracking-wider uppercase mb-1 mr-2";
-            label.innerText = "YOU";
-            const bubble = document.createElement('div');
-            bubble.className = "bg-black text-white p-4 rounded-2xl rounded-tr-sm shadow-md";
-            if (imageBase64) bubble.innerHTML += `<img src="${imageBase64}" class="max-w-[180px] sm:max-w-[250px] rounded-lg mb-3 border border-gray-700">`;
-            if (text) bubble.innerHTML += `<p class="text-sm leading-relaxed">${text}</p>`;
-            wrapper.appendChild(label);
-            wrapper.appendChild(bubble);
-            chatBox.appendChild(wrapper);
-            chatBox.scrollTop = chatBox.scrollHeight;
+        function setLoading(status) {
+            document.getElementById('btn-icon').classList.toggle('hidden', status);
+            document.getElementById('btn-spinner').classList.toggle('hidden', !status);
+            document.getElementById('send-btn').disabled = status;
         }
 
-        function appendAIMessage(markdownText) {
-            const bubble = createEmptyAIBubble();
-            bubble.innerHTML = DOMPurify.sanitize(marked.parse(markdownText));
+        function nukeStorage() {
+            if(confirm("Wipe all system history?")) {
+                localStorage.removeItem('fase_history_v5');
+                location.reload();
+            }
         }
 
-        function createEmptyAIBubble() {
-            const wrapper = document.createElement('div');
-            wrapper.className = "flex flex-col items-start max-w-[95%] sm:max-w-[85%]";
-            const label = document.createElement('span');
-            label.className = "text-[10px] text-gray-400 font-bold tracking-wider uppercase mb-1 ml-2";
-            label.innerText = "FASE";
-            const bubble = document.createElement('div');
-            bubble.className = "bg-gray-50 border border-gray-200 p-4 rounded-2xl rounded-tl-sm text-gray-800 markdown-body text-sm w-full shadow-sm overflow-x-auto";
-            wrapper.appendChild(label);
-            wrapper.appendChild(bubble);
-            chatBox.appendChild(wrapper);
-            chatBox.scrollTop = chatBox.scrollHeight;
-            return bubble; 
+        function copyIDE() {
+            const code = document.getElementById('ide-display').innerText;
+            navigator.clipboard.writeText(code);
+            alert("Code copied to clipboard!");
         }
 
-        // --- EVENT LISTENERS ---
-        document.getElementById('sendBtn').addEventListener("click", sendMessage);
-        document.getElementById('userInput').addEventListener("keypress", (e) => { 
-            if(e.key === "Enter") { e.preventDefault(); sendMessage(); }
-        });
-
-        // Boot the app
-        initApp();
+        // Start in Chat Mode
+        setMode('chat');
     </script>
 </body>
 </html>
