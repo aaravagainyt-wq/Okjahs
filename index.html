@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Fase AI</title>
+    <title>Fase AI - Ultimate Build</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
@@ -18,8 +18,6 @@
         .markdown-body pre { background: #f5f5f5; padding: 12px; border-radius: 8px; border: 1px solid #e5e5e5; overflow-x: auto; margin: 8px 0; font-size: 0.85rem; }
         .markdown-body code { font-family: monospace; background: #f5f5f5; padding: 2px 4px; border-radius: 4px; font-size: 0.85rem; }
         .markdown-body pre code { background: transparent; padding: 0; }
-        .markdown-body strong { font-weight: 600; }
-        .markdown-body ul { list-style-type: disc; margin-left: 20px; margin-bottom: 8px; }
         
         .model-active { background-color: #000; color: #fff; border-color: #000; }
         .model-inactive { background-color: #fff; color: #666; border-color: #e5e5e5; }
@@ -31,87 +29,82 @@
         
         .spinner { animation: spin 1s linear infinite; }
         @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+
+        /* Toast Animation */
+        #toast-container { transition: transform 0.3s ease-in-out, opacity 0.3s; transform: translateY(-100%); opacity: 0; }
+        .toast-show { transform: translateY(0) !important; opacity: 1 !important; }
     </style>
 </head>
-<body class="antialiased">
+<body class="antialiased relative">
 
-    <div id="tos-modal" class="fixed inset-0 bg-white z-[60] flex flex-col items-center justify-center p-6 hidden">
-        <div class="max-w-md w-full space-y-6">
-            <div>
-                <h2 class="text-2xl font-bold tracking-tight">Welcome to Fase</h2>
-                <p class="text-gray-500 mt-2 text-sm">Review safety protocols to initialize.</p>
-            </div>
-            <div class="bg-gray-50 border border-gray-200 p-4 rounded-lg text-sm text-gray-700 h-40 overflow-y-auto space-y-2">
-                <p><strong>1. Experimental:</strong> AI can make mistakes.</p>
-                <p><strong>2. Safety Protocol:</strong> Fase is bound by strict rules against harm, discrimination, and illegal activity.</p>
-                <p><strong>3. Privacy:</strong> Do not input sensitive personal data.</p>
-            </div>
-            <div class="space-y-4">
-                <input type="text" id="userNameInput" placeholder="Your Name" class="w-full border border-gray-300 rounded-lg px-4 py-3 outline-none focus:border-black">
-                <button id="agreeBtn" class="w-full bg-black text-white font-medium px-6 py-3 rounded-lg hover:bg-gray-800 transition-all">Agree & Enter</button>
-            </div>
+    <div id="toast-container" class="fixed top-4 left-0 right-0 z-[100] flex justify-center pointer-events-none">
+        <div id="toast-message" class="bg-red-600 text-white px-4 py-3 rounded-xl shadow-lg font-medium text-sm max-w-sm mx-4 text-center">
+            Error message here.
         </div>
     </div>
 
-    <div id="main-app" class="w-full h-full flex hidden opacity-0 transition-opacity duration-300 relative">
+    <div id="main-app" class="w-full h-full flex relative">
         <div id="sidebar-backdrop" onclick="toggleSidebar()" class="fixed inset-0 bg-black/20 z-40 hidden md:hidden"></div>
 
         <div id="sidebar" class="sidebar-closed absolute md:relative z-50 w-64 h-full bg-gray-50 border-r border-gray-200 flex flex-col shrink-0 shadow-xl md:shadow-none">
-            <div class="p-4 border-b border-gray-200 flex justify-between items-center">
-                <h1 class="text-lg font-bold tracking-tight">Fase</h1>
+            <div class="p-4 border-b border-gray-200 flex justify-between items-center bg-white">
+                <h1 class="text-lg font-bold tracking-tight">Fase System</h1>
                 <button onclick="toggleSidebar()" class="md:hidden p-2 text-gray-500 hover:text-black">
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
                 </button>
             </div>
-            <div class="p-3">
-                <button onclick="createNewChat()" class="w-full bg-white border border-gray-200 text-sm font-medium py-2 rounded-lg hover:bg-gray-100 transition-all flex items-center justify-center gap-2">
+            
+            <div class="p-3 space-y-2 border-b border-gray-200">
+                <button onclick="createNewChat()" class="w-full bg-black text-white text-sm font-medium py-2.5 rounded-lg hover:bg-gray-800 transition-all flex items-center justify-center gap-2 shadow-sm">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
                     New Chat
                 </button>
+                <button onclick="nukeStorage()" class="w-full bg-white border border-red-200 text-red-600 text-sm font-medium py-2 rounded-lg hover:bg-red-50 transition-all flex items-center justify-center gap-2">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                    Reset System Cache
+                </button>
             </div>
+
             <div id="sidebar-history" class="flex-1 overflow-y-auto p-3 space-y-1"></div>
-            <div class="p-4 border-t border-gray-200 text-xs text-gray-400">
-                User: <span id="user-display" class="font-semibold text-gray-600"></span>
+            
+            <div class="p-4 border-t border-gray-200 text-xs text-gray-500 bg-white">
+                Status: <span id="server-status" class="font-semibold text-green-600">Online</span>
             </div>
         </div>
 
         <div class="flex-1 flex flex-col min-w-0 bg-white relative h-full">
             <div class="p-3 sm:p-4 border-b border-gray-200 flex justify-between items-center bg-white/95 backdrop-blur-sm z-10 shrink-0">
                 <div class="flex items-center gap-3">
-                    <button onclick="toggleSidebar()" class="md:hidden p-1 text-gray-600 hover:text-black active:scale-95">
+                    <button onclick="toggleSidebar()" class="md:hidden p-1 text-gray-600 hover:text-black">
                         <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path></svg>
                     </button>
                     <span class="font-bold tracking-tight md:hidden">Fase</span>
                 </div>
                 
                 <div class="flex items-center p-1 bg-gray-100 rounded-lg overflow-x-auto hide-scrollbar max-w-[60vw]">
-                    <button onclick="setModel('flash')" id="btn-flash" class="px-3 sm:px-4 py-1.5 text-[11px] sm:text-xs font-semibold rounded-md border model-inactive shrink-0">Flash</button>
-                    <button onclick="setModel('pro')" id="btn-pro" class="px-3 sm:px-4 py-1.5 text-[11px] sm:text-xs font-semibold rounded-md border model-active shrink-0">Pro</button>
-                    <button onclick="setModel('thinking')" id="btn-thinking" class="px-3 sm:px-4 py-1.5 text-[11px] sm:text-xs font-semibold rounded-md border model-inactive shrink-0">Thinking</button>
+                    <button onclick="setModel('flash')" id="btn-flash" class="px-4 py-1.5 text-xs font-semibold rounded-md border model-inactive shrink-0 transition-colors">Flash</button>
+                    <button onclick="setModel('pro')" id="btn-pro" class="px-4 py-1.5 text-xs font-semibold rounded-md border model-active shrink-0 transition-colors">Pro</button>
+                    <button onclick="setModel('thinking')" id="btn-thinking" class="px-4 py-1.5 text-xs font-semibold rounded-md border model-inactive shrink-0 transition-colors">Thinking</button>
                 </div>
-            </div>
-
-            <div id="server-status" class="hidden bg-blue-50 text-blue-600 text-xs text-center py-1 font-medium transition-all">
-                Waking up Fase servers...
             </div>
 
             <div id="chat-box" class="flex-1 overflow-y-auto p-4 sm:p-6 space-y-6 pb-4"></div>
 
             <div class="w-full bg-white border-t border-gray-200 p-3 shrink-0 pb-safe">
                 <div id="imagePreviewContainer" class="hidden mb-2 relative inline-block">
-                    <img id="imagePreview" src="" class="h-12 w-12 object-cover rounded-md border border-gray-300">
-                    <button onclick="clearImage()" class="absolute -top-2 -right-2 bg-black text-white rounded-full w-5 h-5 flex items-center justify-center text-xs">×</button>
+                    <img id="imagePreview" src="" class="h-14 w-14 object-cover rounded-lg border-2 border-black shadow-sm">
+                    <button onclick="clearImage()" class="absolute -top-2 -right-2 bg-black text-white rounded-full w-6 h-6 flex items-center justify-center text-sm shadow-md hover:scale-110 transition-transform">×</button>
                 </div>
                 
                 <div class="flex items-end gap-2 max-w-4xl mx-auto">
-                    <label class="cursor-pointer p-2 sm:p-3 bg-gray-50 border border-gray-200 rounded-xl hover:bg-gray-100 text-gray-500 shrink-0 mb-[1px]">
-                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13"></path></svg>
+                    <label class="cursor-pointer p-3 bg-gray-50 border border-gray-200 rounded-xl hover:bg-gray-100 text-gray-600 shrink-0 mb-[1px] transition-colors">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
                         <input type="file" id="imageInput" accept="image/*" class="hidden" onchange="handleImageSelect(event)">
                     </label>
 
-                    <input type="text" id="userInput" placeholder="Message Fase..." class="flex-1 bg-gray-50 border border-gray-200 rounded-xl px-3 sm:px-4 py-3 outline-none focus:border-black text-sm h-[44px] sm:h-[50px]">
+                    <input type="text" id="userInput" placeholder="Message Fase..." class="flex-1 bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 outline-none focus:border-black focus:ring-1 focus:ring-black text-sm h-[50px] transition-all">
                     
-                    <button id="sendBtn" class="bg-black text-white font-medium px-4 sm:px-6 py-2 sm:py-3 rounded-xl hover:bg-gray-800 text-sm h-[44px] sm:h-[50px] shrink-0 flex items-center justify-center min-w-[80px]">
+                    <button id="sendBtn" class="bg-black text-white font-medium px-6 py-3 rounded-xl hover:bg-gray-800 text-sm h-[50px] shrink-0 flex items-center justify-center min-w-[80px] transition-colors">
                         <span id="sendBtnText">Send</span>
                         <svg id="sendBtnLoader" class="hidden spinner w-5 h-5 text-white" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
                     </button>
@@ -121,74 +114,54 @@
     </div>
 
     <script>
+        // --- CONFIGURATION ---
         const FASTAPI_URL = "https://lord123hh-shsj.hf.space/chat"; 
-        const HEALTH_URL = "https://lord123hh-shsj.hf.space/"; 
-        let sessionUserName = "User";
+        
+        // --- STATE ---
         let activeModel = "pro";
         let currentImageBase64 = null;
         let chats = JSON.parse(localStorage.getItem('fase_chats')) || [];
         let activeChatId = null;
 
-        const tosModal = document.getElementById('tos-modal');
-        const mainApp = document.getElementById('main-app');
-        const userDisplay = document.getElementById('user-display');
+        // --- DOM ELEMENTS ---
         const chatBox = document.getElementById('chat-box');
         const sidebarHistory = document.getElementById('sidebar-history');
         const sidebar = document.getElementById('sidebar');
         const sidebarBackdrop = document.getElementById('sidebar-backdrop');
-        const serverStatus = document.getElementById('server-status');
         const sendBtnText = document.getElementById('sendBtnText');
         const sendBtnLoader = document.getElementById('sendBtnLoader');
         const sendBtn = document.getElementById('sendBtn');
+        const toastContainer = document.getElementById('toast-container');
+        const toastMessage = document.getElementById('toast-message');
 
+        // Fallback for Markdown parser
         if(typeof marked === "undefined"){ window.marked = { parse: (t) => t }; }
 
-        if (!localStorage.getItem('fase_agreed')) {
-            tosModal.classList.remove('hidden');
-        } else {
-            sessionUserName = localStorage.getItem('fase_username') || "User";
-            initApp();
-        }
-
-        document.getElementById('agreeBtn').addEventListener('click', () => {
-            const name = document.getElementById('userNameInput').value.trim() || "User";
-            localStorage.setItem('fase_agreed', 'true');
-            localStorage.setItem('fase_username', name);
-            sessionUserName = name;
-            tosModal.classList.add('hidden');
-            initApp();
-        });
-
-        async function wakeServer() {
-            serverStatus.classList.remove('hidden');
-            try {
-                await fetch(HEALTH_URL);
-                serverStatus.classList.add('hidden');
-            } catch(e) {
-                serverStatus.innerText = "Server connection delayed.";
-                setTimeout(() => serverStatus.classList.add('hidden'), 3000);
-            }
-        }
-
+        // --- INITIALIZATION ---
         function initApp() {
-            userDisplay.innerText = sessionUserName.toUpperCase();
-            mainApp.classList.remove('hidden');
-            setTimeout(() => { mainApp.classList.remove('opacity-0'); }, 50);
             if (chats.length === 0) createNewChat();
             else loadChat(chats[0].id);
             renderSidebar();
-            wakeServer(); 
+        }
+
+        // --- CORE UI FUNCTIONS ---
+        function showToast(message, duration = 4000) {
+            toastMessage.innerText = message;
+            toastContainer.classList.add('toast-show');
+            setTimeout(() => {
+                toastContainer.classList.remove('toast-show');
+            }, duration);
         }
 
         function toggleSidebar() {
             const isOpen = sidebar.classList.contains('sidebar-open');
             if (isOpen) {
-                sidebar.classList.remove('sidebar-open');
+                sidebar.classList.remove('sidebar-open', 'shadow-2xl');
                 sidebar.classList.add('sidebar-closed');
                 sidebarBackdrop.classList.add('hidden');
             } else {
                 sidebar.classList.remove('sidebar-closed');
-                sidebar.classList.add('sidebar-open');
+                sidebar.classList.add('sidebar-open', 'shadow-2xl');
                 sidebarBackdrop.classList.remove('hidden');
             }
         }
@@ -204,6 +177,17 @@
             activeBtn.classList.add('model-active');
         }
 
+        function nukeStorage() {
+            if(confirm("CRITICAL: This will delete all chat history and reset the app. Are you sure?")) {
+                localStorage.removeItem('fase_chats');
+                chats = [];
+                chatBox.innerHTML = '';
+                createNewChat();
+                showToast("System cache cleared successfully.");
+            }
+        }
+
+        // --- IMAGE HANDLING PIPELINE ---
         function handleImageSelect(event) {
             const file = event.target.files[0];
             if (!file) return;
@@ -213,21 +197,16 @@
                 const img = new Image();
                 img.onload = function() {
                     const canvas = document.createElement('canvas');
+                    // STRICT COMPRESSION to prevent API crashes
                     const MAX_WIDTH = 512;
                     const MAX_HEIGHT = 512;
                     let width = img.width;
                     let height = img.height;
 
                     if (width > height) {
-                        if (width > MAX_WIDTH) {
-                            height *= MAX_WIDTH / width;
-                            width = MAX_WIDTH;
-                        }
+                        if (width > MAX_WIDTH) { height *= MAX_WIDTH / width; width = MAX_WIDTH; }
                     } else {
-                        if (height > MAX_HEIGHT) {
-                            width *= MAX_HEIGHT / height;
-                            height = MAX_HEIGHT;
-                        }
+                        if (height > MAX_HEIGHT) { width *= MAX_HEIGHT / height; height = MAX_HEIGHT; }
                     }
 
                     canvas.width = width;
@@ -235,10 +214,7 @@
                     const ctx = canvas.getContext('2d');
                     ctx.drawImage(img, 0, 0, width, height);
 
-                    currentImageBase64 = canvas.toDataURL('image/jpeg', 0.5);
-                    const payloadSizeKB = Math.round(currentImageBase64.length / 1024);
-                    console.log(`[Fase Debug] Compressed Image: ~${payloadSizeKB} KB`);
-                    
+                    currentImageBase64 = canvas.toDataURL('image/jpeg', 0.6);
                     document.getElementById('imagePreview').src = currentImageBase64;
                     document.getElementById('imagePreviewContainer').classList.remove('hidden');
                 };
@@ -253,8 +229,9 @@
             document.getElementById('imagePreviewContainer').classList.add('hidden');
         }
 
+        // --- CHAT STATE MANAGEMENT ---
         function createNewChat() {
-            const newChat = { id: Date.now().toString(), title: "New Chat", messages: [] };
+            const newChat = { id: Date.now().toString(), title: "New Conversation", messages: [] };
             chats.unshift(newChat);
             saveChats();
             loadChat(newChat.id);
@@ -273,7 +250,7 @@
                     else appendAIMessage(msg.content);
                 });
             } else {
-                appendAIMessage(`Systems initialized, ${sessionUserName}. Fase is online.`);
+                appendAIMessage("Systems initialized. Fase is ready.");
             }
             renderSidebar();
             if(window.innerWidth < 768 && sidebar.classList.contains('sidebar-open')) toggleSidebar();
@@ -286,32 +263,14 @@
             chats.forEach(chat => {
                 const btn = document.createElement('button');
                 const isActive = chat.id === activeChatId;
-                btn.className = `w-full text-left px-3 py-2 mt-1 rounded-lg text-sm truncate transition-all ${isActive ? 'bg-black text-white' : 'text-gray-600 hover:bg-gray-200'}`;
+                btn.className = `w-full text-left px-4 py-2.5 mt-1 rounded-lg text-sm truncate transition-colors border ${isActive ? 'bg-black text-white border-black' : 'bg-white text-gray-700 border-transparent hover:bg-gray-100 hover:border-gray-200'}`;
                 btn.innerText = chat.title;
                 btn.onclick = () => loadChat(chat.id);
                 sidebarHistory.appendChild(btn);
             });
         }
 
-        async function fetchWithRetry(url, options, retries = 2) {
-            for (let i = 0; i < retries; i++) {
-                try {
-                    const response = await fetch(url, options);
-                    if (response.ok) return response;
-                    
-                    const errorData = await response.json().catch(() => ({}));
-                    if (response.status === 429 || response.status === 400) {
-                        throw new Error(errorData.detail || `HTTP Error: ${response.status}`);
-                    }
-                    if (i === retries - 1) throw new Error(errorData.detail || `Server asleep or Error: ${response.status}`);
-                    
-                } catch (err) {
-                    if (i === retries - 1) throw err;
-                    await new Promise(resolve => setTimeout(resolve, 3000));
-                }
-            }
-        }
-
+        // --- API COMMUNICATION ---
         function setSendingState(isSending) {
             if (isSending) {
                 sendBtn.disabled = true;
@@ -333,63 +292,84 @@
 
             const currentChat = chats.find(c => c.id === activeChatId);
             if (currentChat.messages.length === 0) {
-                currentChat.title = text ? text.substring(0, 20) + "..." : "Image Upload";
+                currentChat.title = text ? text.substring(0, 20) + "..." : "Image Analysis";
                 renderSidebar();
             }
 
+            // 1. Render User Message immediately
             appendUserMessage(text, currentImageBase64);
             const savedImage = currentImageBase64; 
-            currentChat.messages.push({ role: "user", content: text, image: savedImage });
-            saveChats();
-
+            
+            // 2. Clear Inputs immediately for good UX
             document.getElementById('userInput').value = '';
             clearImage();
-            
+
+            // 3. Prepare AI Bubble
             const aiBubble = createEmptyAIBubble();
-            aiBubble.innerHTML = `<span class="text-gray-400 italic text-sm animate-pulse">Connecting to Fase...</span>`;
+            aiBubble.innerHTML = `<span class="text-gray-400 italic text-sm animate-pulse flex items-center gap-2"><svg class="w-4 h-4 spinner" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg> Processing...</span>`;
 
             try {
-                const apiHistory = currentChat.messages.slice(0, -1).map(m => ({
+                // Strip images from history to prevent payload bloat
+                const apiHistory = currentChat.messages.map(m => ({
                     role: m.role,
                     content: m.content || "Attached an image."
                 }));
 
-                const payload = { prompt: text || "Analyze this image.", history: apiHistory, model_tier: activeModel, image_base64: savedImage };
+                const payload = { 
+                    prompt: text || "Analyze this image.", 
+                    history: apiHistory, 
+                    model_tier: activeModel, 
+                    image_base64: savedImage 
+                };
 
-                const response = await fetchWithRetry(FASTAPI_URL, {
+                // Add current message to history AFTER building API payload
+                currentChat.messages.push({ role: "user", content: text, image: savedImage });
+
+                // Execute Fetch
+                const response = await fetch(FASTAPI_URL, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(payload)
                 });
 
+                if (!response.ok) {
+                    const errorData = await response.json().catch(() => ({}));
+                    throw new Error(errorData.detail || `Server Error ${response.status}`);
+                }
+
                 const data = await response.json();
                 
-                aiBubble.innerHTML = DOMPurify.sanitize(marked.parse(data.reply || "No response received."));
+                // Render and Save
+                aiBubble.innerHTML = DOMPurify.sanitize(marked.parse(data.reply || "No response."));
                 currentChat.messages.push({ role: "assistant", content: data.reply });
                 saveChats();
 
             } catch (err) {
-                aiBubble.innerHTML = `<div class="text-red-600 bg-red-50 p-2 rounded text-sm border border-red-200">
-                    <strong>Connection Failed:</strong> ${err.message}
-                    <br><span class="text-xs text-red-400">If the server is waking up, try sending again in 30 seconds.</span>
+                // UI Error Handling
+                aiBubble.innerHTML = `<div class="text-red-600 bg-red-50 p-3 rounded-lg text-sm border border-red-200">
+                    <strong>Connection Failed</strong><br>
+                    <span class="text-gray-600 mt-1 block">${err.message}</span>
                 </div>`;
+                showToast(`API Error: ${err.message}`);
+                
+                // Rollback history so user can try again
                 currentChat.messages.pop(); 
-                saveChats();
             } finally {
                 setSendingState(false);
             }
         }
 
+        // --- MESSAGE RENDERING ---
         function appendUserMessage(text, imageBase64 = null) {
             const wrapper = document.createElement('div');
-            wrapper.className = "flex flex-col items-end ml-auto max-w-[90%] sm:max-w-[85%]";
+            wrapper.className = "flex flex-col items-end ml-auto max-w-[90%] sm:max-w-[80%]";
             const label = document.createElement('span');
-            label.className = "text-[10px] text-gray-400 font-semibold uppercase mb-1 mr-1";
-            label.innerText = sessionUserName;
+            label.className = "text-[10px] text-gray-400 font-bold tracking-wider uppercase mb-1 mr-2";
+            label.innerText = "YOU";
             const bubble = document.createElement('div');
-            bubble.className = "bg-black text-white p-3 rounded-2xl rounded-tr-sm shadow-sm";
-            if (imageBase64) bubble.innerHTML += `<img src="${imageBase64}" class="max-w-[150px] sm:max-w-[200px] rounded-lg mb-2 opacity-90 border border-gray-700">`;
-            if (text) bubble.innerHTML += `<p class="text-sm">${text}</p>`;
+            bubble.className = "bg-black text-white p-4 rounded-2xl rounded-tr-sm shadow-md";
+            if (imageBase64) bubble.innerHTML += `<img src="${imageBase64}" class="max-w-[180px] sm:max-w-[250px] rounded-lg mb-3 border border-gray-700">`;
+            if (text) bubble.innerHTML += `<p class="text-sm leading-relaxed">${text}</p>`;
             wrapper.appendChild(label);
             wrapper.appendChild(bubble);
             chatBox.appendChild(wrapper);
@@ -405,10 +385,10 @@
             const wrapper = document.createElement('div');
             wrapper.className = "flex flex-col items-start max-w-[95%] sm:max-w-[85%]";
             const label = document.createElement('span');
-            label.className = "text-[10px] text-gray-400 font-semibold uppercase mb-1 ml-1";
+            label.className = "text-[10px] text-gray-400 font-bold tracking-wider uppercase mb-1 ml-2";
             label.innerText = "FASE";
             const bubble = document.createElement('div');
-            bubble.className = "bg-gray-50 border border-gray-100 p-3 rounded-2xl rounded-tl-sm text-gray-800 markdown-body text-sm w-full shadow-sm overflow-x-auto";
+            bubble.className = "bg-gray-50 border border-gray-200 p-4 rounded-2xl rounded-tl-sm text-gray-800 markdown-body text-sm w-full shadow-sm overflow-x-auto";
             wrapper.appendChild(label);
             wrapper.appendChild(bubble);
             chatBox.appendChild(wrapper);
@@ -416,10 +396,14 @@
             return bubble; 
         }
 
+        // --- EVENT LISTENERS ---
         document.getElementById('sendBtn').addEventListener("click", sendMessage);
         document.getElementById('userInput').addEventListener("keypress", (e) => { 
             if(e.key === "Enter") { e.preventDefault(); sendMessage(); }
         });
+
+        // Boot the app
+        initApp();
     </script>
 </body>
 </html>
