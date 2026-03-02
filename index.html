@@ -172,7 +172,7 @@
         
         let sessionUser = "User";
         let currentFile = { data: null, mime: null, name: null };
-        let chats = JSON.parse(localStorage.getItem('fase_chats_bw')) || [];
+        let chats = JSON.parse(localStorage.getItem('fase_chats_bw_v2')) || [];
         let activeChatId = null;
 
         // --- DOM ELEMENTS ---
@@ -205,17 +205,17 @@
         agreeCheck.addEventListener('change', validateLogin);
         userNameInput.addEventListener('input', validateLogin);
 
-        if (!localStorage.getItem('fase_verified')) {
+        if (!localStorage.getItem('fase_verified_v2')) {
             tosModal.classList.remove('hidden');
         } else {
-            sessionUser = localStorage.getItem('fase_user_alias') || "User";
+            sessionUser = localStorage.getItem('fase_user_alias_v2') || "User";
             initApp();
         }
 
         loginBtn.addEventListener('click', () => {
             const name = userNameInput.value.trim();
-            localStorage.setItem('fase_verified', 'true');
-            localStorage.setItem('fase_user_alias', name);
+            localStorage.setItem('fase_verified_v2', 'true');
+            localStorage.setItem('fase_user_alias_v2', name);
             sessionUser = name;
             tosModal.classList.add('hidden');
             initApp();
@@ -223,7 +223,7 @@
 
         function logout() {
             if(confirm("Are you sure you want to log out? This will require re-accepting the terms.")) {
-                localStorage.removeItem('fase_verified');
+                localStorage.removeItem('fase_verified_v2');
                 location.reload();
             }
         }
@@ -268,7 +268,6 @@
 
         ['dragleave', 'drop'].forEach(eventName => {
             document.body.addEventListener(eventName, (e) => {
-                // Ensure we only hide if we drag completely out or drop
                 if(e.type === 'drop' || !e.relatedTarget || e.relatedTarget.nodeName === "HTML") {
                     dragOverlay.classList.remove('drag-active');
                 }
@@ -289,7 +288,6 @@
         function processFile(file) {
             const reader = new FileReader();
             reader.onload = function(e) {
-                // If it's an image, resize it for API safety
                 if(file.type.startsWith('image/')) {
                     const img = new Image();
                     img.onload = function() {
@@ -305,7 +303,6 @@
                     };
                     img.src = e.target.result;
                 } else {
-                    // PDFs, Audio, Video
                     setFileData(e.target.result, file.type, file.name);
                 }
             };
@@ -358,7 +355,7 @@
             renderSidebar();
         }
 
-        function saveChats() { localStorage.setItem('fase_chats_bw', JSON.stringify(chats)); }
+        function saveChats() { localStorage.setItem('fase_chats_bw_v2', JSON.stringify(chats)); }
 
         function renderSidebar() {
             const list = document.getElementById('sidebar-history');
@@ -425,7 +422,10 @@
                     body: JSON.stringify(payload)
                 });
 
-                if (!response.ok) throw new Error("Connection failed.");
+                if (!response.ok) {
+                    const errorData = await response.json().catch(() => ({}));
+                    throw new Error(errorData.detail || `Server crashed with status: ${response.status}`);
+                }
 
                 const data = await response.json();
                 
@@ -434,7 +434,7 @@
                 saveChats();
 
             } catch (err) {
-                aiBubble.innerHTML = `<span class="text-red-500 font-medium">Error: ${err.message}. Please check if the backend server is running.</span>`;
+                aiBubble.innerHTML = `<span class="text-red-600 font-bold border border-red-200 bg-red-50 p-2 rounded">SYSTEM ERROR: ${err.message}</span>`;
                 currentChat.messages.pop(); // Remove failed message
             } finally {
                 toggleLoading(false);
