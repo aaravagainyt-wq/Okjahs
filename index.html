@@ -1,336 +1,494 @@
 <!DOCTYPE html>
-<html lang="en" class="dark">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Fase Ultra | Multimodal AI OS</title>
+    <title>Fase AI</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Inter:wght@300;400;600;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.0.6/purify.min.js"></script>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css">
     
     <style>
-        :root { --accent: #3b82f6; --bg: #050505; --panel: #111111; --border: #222222; }
-        body { background: var(--bg); color: #e5e5e5; font-family: 'Inter', sans-serif; overflow: hidden; height: 100dvh; }
-        .mono { font-family: 'JetBrains Mono', monospace; }
+        body { font-family: 'Inter', sans-serif; background: #ffffff; color: #000000; overflow: hidden; height: 100dvh; }
+        ::-webkit-scrollbar { width: 5px; }
+        ::-webkit-scrollbar-thumb { background: #e5e5e5; border-radius: 10px; }
+        ::-webkit-scrollbar-thumb:hover { background: #cccccc; }
         
-        /* Layout Grid */
-        .app-grid { display: grid; grid-template-columns: 280px 1fr 400px; height: 100vh; }
-        @media (max-width: 1280px) { .app-grid { grid-template-columns: 80px 1fr; } .right-panel { display: none; } }
-        @media (max-width: 768px) { .app-grid { grid-template-columns: 1fr; } .left-panel { display: none; } }
+        /* Drag & Drop Overlay */
+        #drag-overlay { transition: opacity 0.2s; background: rgba(255, 255, 255, 0.9); backdrop-filter: blur(4px); }
+        .drag-active { opacity: 1 !important; pointer-events: auto !important; z-index: 100; }
 
-        /* Custom Scrollbar */
-        ::-webkit-scrollbar { width: 4px; height: 4px; }
-        ::-webkit-scrollbar-thumb { background: #333; border-radius: 10px; }
+        /* Custom UI Elements */
+        .sidebar { transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
+        .sidebar-open { transform: translateX(0); }
+        .sidebar-closed { transform: translateX(-100%); }
+        @media (min-width: 768px) { .sidebar-closed { transform: translateX(0); } }
+
+        /* Markdown Overrides for B&W */
+        .markdown-body pre { background: #f9fafb; border: 1px solid #e5e5e5; padding: 12px; border-radius: 8px; overflow-x: auto; font-size: 0.85rem; margin: 10px 0; }
+        .markdown-body code { font-family: monospace; background: #f3f4f6; padding: 2px 4px; border-radius: 4px; font-size: 0.85rem; }
+        .markdown-body pre code { background: transparent; padding: 0; }
+        .markdown-body p { margin-bottom: 0.75rem; line-height: 1.6; }
+        .markdown-body strong { font-weight: 600; }
+        .markdown-body ul { list-style-type: disc; margin-left: 20px; margin-bottom: 8px; }
         
-        /* Components */
-        .glass-panel { background: var(--panel); border: 1px solid var(--border); }
-        .chat-user { background: var(--accent); color: white; border-radius: 18px 18px 2px 18px; }
-        .chat-ai { background: #1a1a1a; border: 1px solid var(--border); border-radius: 18px 18px 18px 2px; }
-        .btn-tool { @apply p-2 rounded-lg hover:bg-zinc-800 transition-all flex items-center gap-3 text-sm text-zinc-400 hover:text-white; }
-        .active-tool { color: var(--accent) !important; background: #1d4ed81a; border: 1px solid #1d4ed833; }
-        
-        /* Animations */
-        @keyframes pulse-border { 0% { border-color: #222; } 50% { border-color: var(--accent); } 100% { border-color: #222; } }
-        .analyzing { animation: pulse-border 2s infinite; }
         .spinner { animation: spin 1s linear infinite; }
         @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
-        
-        /* Markdown Overrides */
-        .markdown-body pre { background: #000 !important; border: 1px solid #333; padding: 1rem; border-radius: 8px; margin: 1rem 0; }
-        .markdown-body code { color: #f87171; background: #222; padding: 2px 4px; border-radius: 4px; }
-        .markdown-body table { width: 100%; border-collapse: collapse; margin: 1rem 0; }
-        .markdown-body th, .markdown-body td { border: 1px solid #333; padding: 8px; text-align: left; }
     </style>
 </head>
-<body>
+<body class="antialiased flex relative">
 
-    <div class="app-grid">
-        
-        <aside class="left-panel glass-panel flex flex-col p-4 z-50">
-            <div class="flex items-center gap-3 mb-8 px-2">
-                <div class="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center font-black text-white">F</div>
-                <h1 class="text-lg font-bold tracking-tighter">FASE ULTRA</h1>
-            </div>
-
-            <nav class="flex-1 space-y-1">
-                <p class="text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-2 px-2">Core Systems</p>
-                <button onclick="setMode('chat')" id="m-chat" class="btn-tool w-full active-tool"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"></path></svg> Neural Chat</button>
-                <button onclick="setMode('research')" id="m-research" class="btn-tool w-full"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg> Real-time Research</button>
-                <button onclick="setMode('vision')" id="m-vision" class="btn-tool w-full"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path><path d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path></svg> Vision Lab</button>
-                
-                <p class="text-[10px] font-bold text-zinc-500 uppercase tracking-widest mt-8 mb-2 px-2">Creative & Analysis</p>
-                <button onclick="setMode('code')" id="m-code" class="btn-tool w-full"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"></path></svg> IDE Terminal</button>
-                <button onclick="setMode('math')" id="m-math" class="btn-tool w-full"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 12h.01M12 12h.01M15 12h.01M12 7h.01"></path></svg> Math Solver</button>
-                <button onclick="setMode('media')" id="m-media" class="btn-tool w-full"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"></path><path d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg> Media Studio</button>
-            </nav>
-
-            <div class="mt-auto pt-4 border-t border-zinc-800 space-y-4">
-                <div class="bg-zinc-900 rounded-xl p-3">
-                    <p class="text-[10px] text-zinc-500 mb-1">CURRENT MODEL</p>
-                    <p id="model-status" class="text-xs font-bold text-blue-400">Gemini 2.0 Flash</p>
-                </div>
-                <button onclick="nukeStorage()" class="text-[10px] text-red-500 hover:text-red-400 transition-colors">Wipe All Local Data</button>
-            </div>
-        </aside>
-
-        <main class="flex flex-col relative min-w-0 border-r border-zinc-800">
-            <header class="p-4 border-b border-zinc-800 flex justify-between items-center bg-black/50 backdrop-blur-md">
-                <div class="flex items-center gap-2">
-                    <span id="active-mode-title" class="text-sm font-bold uppercase tracking-widest text-zinc-400">Neural Chat</span>
-                </div>
-                <div class="flex gap-2">
-                    <div class="h-2 w-2 rounded-full bg-green-500 animate-pulse"></div>
-                    <span class="text-[10px] text-zinc-500 font-bold uppercase">System Ready</span>
-                </div>
-            </header>
-
-            <div id="chat-box" class="flex-1 overflow-y-auto p-4 sm:p-8 space-y-8 pb-32">
-                <div class="chat-ai max-w-[90%] p-6">
-                    <h2 class="text-xl font-bold mb-2">Welcome to Fase Ultra v5.0</h2>
-                    <p class="text-sm text-zinc-400 leading-relaxed">Multimodal systems are online. You can upload <strong>Images, Audio, Video, or PDFs</strong>. Switch to Research mode for real-time web access or IDE for coding.</p>
-                </div>
-            </div>
-
-            <div class="absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-black via-black to-transparent">
-                <div id="file-tray" class="hidden mb-2 flex items-center gap-2 bg-zinc-900 p-2 rounded-xl border border-blue-500/30">
-                    <div id="file-icon" class="p-2 bg-blue-600 rounded-lg text-white"></div>
-                    <div class="flex-1 min-w-0">
-                        <p id="file-name" class="text-xs font-bold truncate">filename.pdf</p>
-                        <p id="file-info" class="text-[10px] text-zinc-500 uppercase">PDF Document</p>
-                    </div>
-                    <button onclick="clearFile()" class="p-2 text-zinc-400 hover:text-white">×</button>
-                </div>
-
-                <div class="max-w-4xl mx-auto glass-panel rounded-2xl p-2 flex items-end gap-2 shadow-2xl transition-all focus-within:ring-1 focus-within:ring-blue-500/50" id="input-container">
-                    <label class="p-3 cursor-pointer text-zinc-500 hover:text-blue-500 transition-colors">
-                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
-                        <input type="file" id="global-uploader" class="hidden" onchange="handleUploader(event)">
-                    </label>
-                    
-                    <textarea id="user-input" rows="1" placeholder="Type message or upload multimodal data..." 
-                        class="flex-1 bg-transparent border-none p-3 text-sm focus:ring-0 outline-none resize-none max-h-48"
-                        oninput="this.style.height = ''; this.style.height = this.scrollHeight + 'px'"></textarea>
-                    
-                    <button id="send-btn" onclick="executeTask()" class="bg-blue-600 text-white p-3 rounded-xl hover:bg-blue-700 transition-all flex items-center justify-center min-w-[50px]">
-                        <span id="btn-icon"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 5l7 7-7 7M5 5l7 7-7 7"></path></svg></span>
-                        <svg id="btn-spinner" class="hidden w-5 h-5 spinner" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
-                    </button>
-                </div>
-            </div>
-        </main>
-
-        <aside class="right-panel flex flex-col glass-panel border-l border-zinc-800 overflow-hidden">
-            <div class="flex border-b border-zinc-800">
-                <button onclick="setRightTab('ide')" id="t-ide" class="flex-1 p-3 text-[10px] font-bold uppercase tracking-widest text-zinc-500 border-b-2 border-blue-600 text-blue-500">IDE</button>
-                <button onclick="setRightTab('analysis')" id="t-analysis" class="flex-1 p-3 text-[10px] font-bold uppercase tracking-widest text-zinc-500 border-b-2 border-transparent">Analysis</button>
-                <button onclick="setRightTab('assets')" id="t-assets" class="flex-1 p-3 text-[10px] font-bold uppercase tracking-widest text-zinc-500 border-b-2 border-transparent">Assets</button>
-            </div>
-
-            <div id="pane-ide" class="flex-1 flex flex-col overflow-hidden">
-                <div class="bg-black/50 p-2 flex justify-between items-center border-b border-zinc-800">
-                    <span class="text-[10px] mono text-zinc-600">fase_scratchpad.py</span>
-                    <button onclick="copyIDE()" class="text-[10px] bg-zinc-800 hover:bg-zinc-700 px-2 py-1 rounded">COPY</button>
-                </div>
-                <pre class="flex-1 p-4 overflow-auto mono text-xs leading-relaxed"><code id="ide-display" class="language-python"># AI Generated Code will appear here...
-def hello_fase():
-    print("System Initialized")</code></pre>
-            </div>
-
-            <div id="pane-analysis" class="hidden flex-1 p-4 space-y-6 overflow-auto">
-                <div class="space-y-2">
-                    <p class="text-[10px] font-bold text-zinc-500 uppercase">Token Usage</p>
-                    <div class="w-full bg-zinc-800 h-1 rounded-full overflow-hidden">
-                        <div class="bg-blue-600 h-full w-[12%]"></div>
-                    </div>
-                </div>
-                <div class="glass-panel p-4 rounded-xl space-y-4">
-                    <p class="text-xs font-bold">SENTIMENT ANALYSIS</p>
-                    <div class="flex justify-between items-center">
-                        <span class="text-xs text-zinc-400">Tone</span>
-                        <span class="text-xs font-bold text-green-500">Productive</span>
-                    </div>
-                </div>
-                <div id="data-explorer" class="space-y-4">
-                    <p class="text-[10px] font-bold text-zinc-500 uppercase">Data Extracted</p>
-                    <div class="text-[10px] text-zinc-600 italic">No structured data found in last message.</div>
-                </div>
-            </div>
-        </aside>
-
+    <div id="drag-overlay" class="fixed inset-0 border-4 border-dashed border-black m-4 rounded-2xl flex flex-col items-center justify-center opacity-0 pointer-events-none z-[-1]">
+        <svg class="w-16 h-16 text-black mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path></svg>
+        <h2 class="text-2xl font-bold">Drop files to upload</h2>
+        <p class="text-gray-500 mt-2">Images, PDFs, Audio, Video</p>
     </div>
 
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-python.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-javascript.min.js"></script>
+    <div id="tos-modal" class="fixed inset-0 bg-white z-[60] flex flex-col items-center justify-center p-6 hidden">
+        <div class="max-w-md w-full space-y-6">
+            <div class="text-center">
+                <div class="w-12 h-12 bg-black text-white rounded-xl flex items-center justify-center text-xl font-bold mx-auto mb-4">F</div>
+                <h2 class="text-3xl font-bold tracking-tight">Fase AI</h2>
+                <p class="text-gray-500 mt-2 text-sm">Identity & Safety Verification</p>
+            </div>
+            
+            <div class="bg-gray-50 border border-gray-200 p-5 rounded-xl text-sm text-gray-700 h-48 overflow-y-auto space-y-3">
+                <p class="font-bold text-black border-b border-gray-200 pb-2">Terms of Use & Developer Protection</p>
+                <p><strong>1. Experimental System:</strong> Fase is an AI tool. It can hallucinate or provide inaccurate data. Do not rely on it for medical, legal, or financial advice.</p>
+                <p><strong>2. Liability Waiver:</strong> By logging in, you agree that the creator of Fase is not responsible for any output generated by the AI, nor any actions taken based on that output.</p>
+                <p><strong>3. Content Rules:</strong> You agree not to use Fase to generate illegal, highly explicit, or intentionally harmful content. Violations may result in API bans.</p>
+                <p><strong>4. Privacy:</strong> Data is stored locally in your browser. Do not upload highly sensitive personal information.</p>
+            </div>
+
+            <div class="space-y-4 pt-2">
+                <input type="text" id="userNameInput" placeholder="Enter your alias..." class="w-full bg-white border border-gray-300 rounded-xl px-4 py-3 outline-none focus:border-black transition-colors font-medium text-black">
+                
+                <label class="flex items-start gap-3 cursor-pointer">
+                    <input type="checkbox" id="agreeCheck" class="mt-1 w-4 h-4 text-black border-gray-300 rounded focus:ring-black">
+                    <span class="text-xs text-gray-600">I have read and agree to the Terms of Use, and I accept full responsibility for my usage.</span>
+                </label>
+
+                <button id="loginBtn" disabled class="w-full bg-gray-200 text-gray-400 font-bold px-6 py-3.5 rounded-xl transition-all disabled:cursor-not-allowed">Accept & Enter</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="main-app" class="w-full h-full flex hidden opacity-0 transition-opacity duration-300 relative">
+        
+        <div id="sidebar-backdrop" onclick="toggleSidebar()" class="fixed inset-0 bg-black/20 z-40 hidden md:hidden backdrop-blur-sm"></div>
+
+        <div id="sidebar" class="sidebar-closed absolute md:relative z-50 w-72 h-full bg-gray-50 border-r border-gray-200 flex flex-col shrink-0">
+            <div class="p-5 flex justify-between items-center">
+                <div class="flex items-center gap-3">
+                    <div class="w-8 h-8 bg-black text-white rounded-lg flex items-center justify-center font-bold">F</div>
+                    <span class="font-bold tracking-tight text-lg">Fase AI</span>
+                </div>
+                <button onclick="toggleSidebar()" class="md:hidden p-2 text-gray-500 hover:text-black">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                </button>
+            </div>
+            
+            <div class="px-4 pb-4">
+                <button onclick="createNewChat()" class="w-full bg-black text-white text-sm font-semibold py-3 rounded-xl hover:bg-gray-800 transition-all flex items-center justify-center gap-2 shadow-sm">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+                    New Conversation
+                </button>
+            </div>
+
+            <div class="px-4 text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">History</div>
+            <div id="sidebar-history" class="flex-1 overflow-y-auto px-3 space-y-1 pb-4"></div>
+            
+            <div class="p-4 border-t border-gray-200 bg-white flex items-center justify-between">
+                <div class="flex items-center gap-3 overflow-hidden">
+                    <div class="w-9 h-9 bg-gray-200 rounded-full flex items-center justify-center text-gray-600 font-bold shrink-0" id="user-avatar">U</div>
+                    <div class="truncate">
+                        <p id="user-display" class="font-bold text-sm text-black truncate">User</p>
+                        <p class="text-[10px] text-gray-500 uppercase tracking-widest">Verified Account</p>
+                    </div>
+                </div>
+                <button onclick="logout()" class="text-gray-400 hover:text-red-500 transition-colors p-2" title="Log Out">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path></svg>
+                </button>
+            </div>
+        </div>
+
+        <div class="flex-1 flex flex-col min-w-0 bg-white relative">
+            
+            <div class="h-16 border-b border-gray-200 flex justify-between items-center px-4 bg-white/90 backdrop-blur-md z-10 shrink-0">
+                <div class="flex items-center gap-3">
+                    <button onclick="toggleSidebar()" class="md:hidden p-2 -ml-2 text-gray-600 hover:text-black rounded-lg hover:bg-gray-100">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path></svg>
+                    </button>
+                    <span id="chat-title-header" class="font-semibold text-gray-800 truncate hidden sm:block">New Conversation</span>
+                </div>
+                
+                <select id="model-selector" class="bg-gray-50 border border-gray-200 text-sm rounded-lg focus:ring-black focus:border-black block px-3 py-1.5 outline-none font-medium cursor-pointer">
+                    <option value="flash">Fast Mode (Text)</option>
+                    <option value="pro" selected>Pro Mode (Multimodal)</option>
+                    <option value="research">Web Search Mode</option>
+                </select>
+            </div>
+
+            <div id="chat-box" class="flex-1 overflow-y-auto p-4 sm:p-6 space-y-6 pb-8"></div>
+
+            <div class="p-4 bg-white border-t border-gray-200">
+                <div class="max-w-4xl mx-auto">
+                    <div id="file-tray" class="hidden mb-3 p-2 bg-gray-50 border border-gray-200 rounded-xl flex items-center justify-between shadow-sm">
+                        <div class="flex items-center gap-3 overflow-hidden">
+                            <div class="bg-white border border-gray-200 p-1.5 rounded-lg text-lg shadow-sm" id="file-icon">📄</div>
+                            <span id="file-name-display" class="text-sm font-medium text-gray-700 truncate">document.pdf</span>
+                        </div>
+                        <button onclick="clearFile()" class="p-2 text-gray-400 hover:text-black transition-colors rounded-lg hover:bg-gray-200">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                        </button>
+                    </div>
+
+                    <div class="relative flex items-end bg-gray-50 border border-gray-300 rounded-2xl focus-within:border-black focus-within:ring-1 focus-within:ring-black transition-all shadow-sm overflow-hidden p-1">
+                        
+                        <label class="p-3 cursor-pointer text-gray-400 hover:text-black transition-colors shrink-0" title="Attach file">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13"></path></svg>
+                            <input type="file" id="file-input" class="hidden" onchange="handleFileSelect(event)">
+                        </label>
+                        
+                        <textarea id="user-input" rows="1" placeholder="Message Fase or drag & drop a file here..." class="flex-1 bg-transparent border-none py-3 px-2 text-sm focus:ring-0 outline-none resize-none max-h-32" oninput="this.style.height = 'auto'; this.style.height = this.scrollHeight + 'px'"></textarea>
+                        
+                        <button id="send-btn" onclick="sendMessage()" class="m-1 p-2.5 bg-black text-white rounded-xl hover:bg-gray-800 transition-all shrink-0">
+                            <svg id="send-icon" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"></path></svg>
+                            <svg id="load-icon" class="hidden w-5 h-5 spinner" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+                        </button>
+                    </div>
+                    <div class="text-center mt-2">
+                        <span class="text-[10px] text-gray-400">Fase can make mistakes. Verify important information.</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
 
     <script>
-        // CONFIG
-        const API_URL = "https://lord123hh-shsj.hf.space/chat";
+        // --- CORE SETTINGS ---
+        const API_URL = "https://lord123hh-shsj.hf.space/chat"; 
         
-        // STATE
-        let activeMode = 'chat';
+        let sessionUser = "User";
         let currentFile = { data: null, mime: null, name: null };
-        let chatHistory = JSON.parse(localStorage.getItem('fase_history_v5')) || [];
-        
-        // CORE ROUTER
-        function setMode(mode) {
-            activeMode = mode;
-            document.querySelectorAll('.btn-tool').forEach(b => b.classList.remove('active-tool'));
-            document.getElementById(`m-${mode}`).classList.add('active-tool');
-            document.getElementById('active-mode-title').innerText = mode.toUpperCase() + (mode === 'chat' ? ' Neural Chat' : '');
-            
-            // Logic for specialized modes
-            if(mode === 'research') {
-                document.getElementById('model-status').innerText = "Gemini 2.0 + Search";
-                document.getElementById('input-container').classList.add('analyzing');
+        let chats = JSON.parse(localStorage.getItem('fase_chats_bw')) || [];
+        let activeChatId = null;
+
+        // --- DOM ELEMENTS ---
+        const tosModal = document.getElementById('tos-modal');
+        const mainApp = document.getElementById('main-app');
+        const chatBox = document.getElementById('chat-box');
+        const sidebar = document.getElementById('sidebar');
+        const userInput = document.getElementById('user-input');
+        const dragOverlay = document.getElementById('drag-overlay');
+
+        if(typeof marked === "undefined"){ window.marked = { parse: (t) => t }; }
+
+        // --- LOGIN & TOS LOGIC ---
+        const agreeCheck = document.getElementById('agreeCheck');
+        const userNameInput = document.getElementById('userNameInput');
+        const loginBtn = document.getElementById('loginBtn');
+
+        function validateLogin() {
+            if(agreeCheck.checked && userNameInput.value.trim().length > 0) {
+                loginBtn.disabled = false;
+                loginBtn.classList.remove('bg-gray-200', 'text-gray-400');
+                loginBtn.classList.add('bg-black', 'text-white');
             } else {
-                document.getElementById('model-status').innerText = "Gemini 2.0 Flash";
-                document.getElementById('input-container').classList.remove('analyzing');
+                loginBtn.disabled = true;
+                loginBtn.classList.add('bg-gray-200', 'text-gray-400');
+                loginBtn.classList.remove('bg-black', 'text-white');
+            }
+        }
+        
+        agreeCheck.addEventListener('change', validateLogin);
+        userNameInput.addEventListener('input', validateLogin);
+
+        if (!localStorage.getItem('fase_verified')) {
+            tosModal.classList.remove('hidden');
+        } else {
+            sessionUser = localStorage.getItem('fase_user_alias') || "User";
+            initApp();
+        }
+
+        loginBtn.addEventListener('click', () => {
+            const name = userNameInput.value.trim();
+            localStorage.setItem('fase_verified', 'true');
+            localStorage.setItem('fase_user_alias', name);
+            sessionUser = name;
+            tosModal.classList.add('hidden');
+            initApp();
+        });
+
+        function logout() {
+            if(confirm("Are you sure you want to log out? This will require re-accepting the terms.")) {
+                localStorage.removeItem('fase_verified');
+                location.reload();
             }
         }
 
-        // TAB SYSTEM
-        function setRightTab(tab) {
-            ['ide', 'analysis', 'assets'].forEach(t => {
-                document.getElementById(`pane-${t}`).classList.add('hidden');
-                document.getElementById(`t-${t}`).classList.remove('border-blue-600', 'text-blue-500');
-            });
-            document.getElementById(`pane-${tab}`).classList.remove('hidden');
-            document.getElementById(`t-${tab}`).classList.add('border-blue-600', 'text-blue-500');
+        function initApp() {
+            document.getElementById('user-display').innerText = sessionUser;
+            document.getElementById('user-avatar').innerText = sessionUser.charAt(0).toUpperCase();
+            mainApp.classList.remove('hidden');
+            setTimeout(() => { mainApp.classList.remove('opacity-0'); }, 50);
+            
+            if (chats.length === 0) createNewChat();
+            else loadChat(chats[0].id);
+            renderSidebar();
         }
 
-        // MULTIMODAL UPLOADER
-        function handleUploader(e) {
-            const file = e.target.files[0];
-            if (!file) return;
+        // --- UI TOGGLES ---
+        function toggleSidebar() {
+            const isOpen = sidebar.classList.contains('sidebar-open');
+            if (isOpen) {
+                sidebar.classList.remove('sidebar-open');
+                sidebar.classList.add('sidebar-closed');
+                document.getElementById('sidebar-backdrop').classList.add('hidden');
+            } else {
+                sidebar.classList.remove('sidebar-closed');
+                sidebar.classList.add('sidebar-open');
+                document.getElementById('sidebar-backdrop').classList.remove('hidden');
+            }
+        }
 
+        // --- DRAG AND DROP & FILE HANDLING ---
+        ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+            document.body.addEventListener(eventName, preventDefaults, false);
+        });
+
+        function preventDefaults(e) { e.preventDefault(); e.stopPropagation(); }
+
+        ['dragenter', 'dragover'].forEach(eventName => {
+            document.body.addEventListener(eventName, () => {
+                dragOverlay.classList.add('drag-active');
+            }, false);
+        });
+
+        ['dragleave', 'drop'].forEach(eventName => {
+            document.body.addEventListener(eventName, (e) => {
+                // Ensure we only hide if we drag completely out or drop
+                if(e.type === 'drop' || !e.relatedTarget || e.relatedTarget.nodeName === "HTML") {
+                    dragOverlay.classList.remove('drag-active');
+                }
+            }, false);
+        });
+
+        document.body.addEventListener('drop', (e) => {
+            const dt = e.dataTransfer;
+            const file = dt.files[0];
+            if(file) processFile(file);
+        }, false);
+
+        function handleFileSelect(e) {
+            const file = e.target.files[0];
+            if(file) processFile(file);
+        }
+
+        function processFile(file) {
             const reader = new FileReader();
-            reader.onload = (f) => {
-                currentFile = { data: f.target.result, mime: file.type, name: file.name };
-                document.getElementById('file-name').innerText = file.name;
-                document.getElementById('file-tray').classList.remove('hidden');
-                
-                // Icon Logic
-                let icon = '📄';
-                if(file.type.includes('image')) icon = '🖼️';
-                if(file.type.includes('video')) icon = '🎬';
-                if(file.type.includes('audio')) icon = '🎵';
-                document.getElementById('file-icon').innerText = icon;
-                document.getElementById('file-info').innerText = file.type.split('/')[1].toUpperCase();
+            reader.onload = function(e) {
+                // If it's an image, resize it for API safety
+                if(file.type.startsWith('image/')) {
+                    const img = new Image();
+                    img.onload = function() {
+                        const canvas = document.createElement('canvas');
+                        const MAX = 800;
+                        let w = img.width, h = img.height;
+                        if (w > h && w > MAX) { h *= MAX / w; w = MAX; }
+                        else if (h > MAX) { w *= MAX / h; h = MAX; }
+                        canvas.width = w; canvas.height = h;
+                        canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+                        
+                        setFileData(canvas.toDataURL('image/jpeg', 0.6), file.type, file.name);
+                    };
+                    img.src = e.target.result;
+                } else {
+                    // PDFs, Audio, Video
+                    setFileData(e.target.result, file.type, file.name);
+                }
             };
             reader.readAsDataURL(file);
+        }
+
+        function setFileData(data, mime, name) {
+            currentFile = { data, mime, name };
+            document.getElementById('file-name-display').innerText = name;
+            
+            let icon = '📄';
+            if(mime.includes('image')) icon = '🖼️';
+            if(mime.includes('video')) icon = '🎬';
+            if(mime.includes('audio')) icon = '🎵';
+            document.getElementById('file-icon').innerText = icon;
+            
+            document.getElementById('file-tray').classList.remove('hidden');
         }
 
         function clearFile() {
             currentFile = { data: null, mime: null, name: null };
             document.getElementById('file-tray').classList.add('hidden');
-            document.getElementById('global-uploader').value = '';
+            document.getElementById('file-input').value = "";
         }
 
-        // UI RENDERING
-        function appendMessage(role, text, file = null) {
-            const box = document.getElementById('chat-box');
-            const wrap = document.createElement('div');
-            wrap.className = `flex flex-col ${role === 'user' ? 'items-end' : 'items-start'}`;
-            
-            const label = document.createElement('span');
-            label.className = "text-[10px] font-bold text-zinc-600 mb-1 px-2 uppercase tracking-widest";
-            label.innerText = role === 'user' ? 'Aarav' : 'Fase Core';
-
-            const bubble = document.createElement('div');
-            bubble.className = `p-4 text-sm leading-relaxed max-w-[85%] sm:max-w-[70%] ${role === 'user' ? 'chat-user' : 'chat-ai shadow-lg'} markdown-body`;
-            
-            if (file && file.mime.includes('image')) {
-                bubble.innerHTML += `<img src="${file.data}" class="max-w-full rounded-lg mb-4 border border-white/10 shadow-xl">`;
-            } else if (file) {
-                bubble.innerHTML += `<div class="bg-black/20 p-2 rounded text-[10px] mb-4 border border-white/5 uppercase">📎 ${file.name}</div>`;
-            }
-
-            bubble.innerHTML += DOMPurify.sanitize(marked.parse(text));
-            
-            wrap.appendChild(label);
-            wrap.appendChild(bubble);
-            box.appendChild(wrap);
-            box.scrollTop = box.scrollHeight;
-
-            // AUTO-IDE EXTRACTION
-            const codeMatch = text.match(/```(?:python|javascript|js|py)?\n([\s\S]+?)\n```/i);
-            if(codeMatch) {
-                document.getElementById('ide-display').innerText = codeMatch[1];
-                Prism.highlightAll();
-                setRightTab('ide');
-            }
+        // --- CHAT MANAGEMENT ---
+        function createNewChat() {
+            const newChat = { id: Date.now().toString(), title: "New Conversation", messages: [] };
+            chats.unshift(newChat);
+            saveChats();
+            loadChat(newChat.id);
+            renderSidebar();
+            if(window.innerWidth < 768) toggleSidebar();
         }
 
-        // CORE EXECUTION
-        async function executeTask() {
-            const input = document.getElementById('user-input');
-            const prompt = input.value.trim();
-            if (!prompt && !currentFile.data) return;
-
-            setLoading(true);
-            appendMessage('user', prompt || `Analyzing ${currentFile.name}...`, {...currentFile});
+        function loadChat(chatId) {
+            activeChatId = chatId;
+            chatBox.innerHTML = '';
+            const chat = chats.find(c => c.id === chatId);
+            document.getElementById('chat-title-header').innerText = chat.title;
             
-            const payload = {
-                prompt: prompt || "Explain this file content.",
-                history: chatHistory.slice(-10),
-                model_tier: activeMode === 'research' ? 'research' : 'pro',
-                file_data: currentFile.data,
-                file_mime: currentFile.mime
-            };
+            if (chat && chat.messages.length > 0) {
+                chat.messages.forEach(msg => {
+                    if(msg.role === 'user') appendUserMessage(msg.content, msg.file);
+                    else appendAIMessage(msg.content);
+                });
+            } else {
+                appendAIMessage("Hi there. I'm Fase. How can I help you today?");
+            }
+            renderSidebar();
+        }
 
-            input.value = '';
-            input.style.height = 'auto';
-            const savedFile = {...currentFile};
+        function saveChats() { localStorage.setItem('fase_chats_bw', JSON.stringify(chats)); }
+
+        function renderSidebar() {
+            const list = document.getElementById('sidebar-history');
+            list.innerHTML = '';
+            chats.forEach(chat => {
+                const btn = document.createElement('button');
+                const isActive = chat.id === activeChatId;
+                btn.className = `w-full text-left px-3 py-2.5 mt-1 rounded-lg text-sm truncate transition-colors ${isActive ? 'bg-gray-200 text-black font-semibold' : 'text-gray-600 hover:bg-gray-100'}`;
+                btn.innerText = chat.title;
+                btn.onclick = () => loadChat(chat.id);
+                list.appendChild(btn);
+            });
+        }
+
+        // --- MESSAGE LOGIC ---
+        function toggleLoading(isLoading) {
+            document.getElementById('send-btn').disabled = isLoading;
+            document.getElementById('send-icon').classList.toggle('hidden', isLoading);
+            document.getElementById('load-icon').classList.toggle('hidden', !isLoading);
+        }
+
+        async function sendMessage() {
+            const text = userInput.value.trim();
+            if (!text && !currentFile.data) return;
+
+            toggleLoading(true);
+
+            const currentChat = chats.find(c => c.id === activeChatId);
+            if (currentChat.messages.length === 0 && text) {
+                currentChat.title = text.substring(0, 25) + "...";
+                document.getElementById('chat-title-header').innerText = currentChat.title;
+                renderSidebar();
+            }
+
+            const savedFile = { ...currentFile };
+            appendUserMessage(text, savedFile);
+            
+            userInput.value = '';
+            userInput.style.height = 'auto';
             clearFile();
 
+            const aiBubble = createEmptyAIBubble();
+            aiBubble.innerHTML = `<span class="text-gray-400">Thinking...</span>`;
+
             try {
+                const apiHistory = currentChat.messages.map(m => ({
+                    role: m.role,
+                    content: m.content || "Attached a file."
+                }));
+
+                const payload = { 
+                    prompt: text || "Analyze the attached file.", 
+                    history: apiHistory, 
+                    model_tier: document.getElementById('model-selector').value, 
+                    file_data: savedFile.data,
+                    file_mime: savedFile.mime
+                };
+
+                currentChat.messages.push({ role: "user", content: text, file: savedFile.data ? savedFile : null });
+
                 const response = await fetch(API_URL, {
                     method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
+                    headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(payload)
                 });
 
-                if(!response.ok) throw new Error("Backend connection failed.");
-                
+                if (!response.ok) throw new Error("Connection failed.");
+
                 const data = await response.json();
-                appendMessage('ai', data.reply);
                 
-                // SAVE HISTORY
-                chatHistory.push({role: 'user', content: prompt || "Multimodal Upload"});
-                chatHistory.push({role: 'assistant', content: data.reply});
-                localStorage.setItem('fase_history_v5', JSON.stringify(chatHistory.slice(-20)));
+                aiBubble.innerHTML = DOMPurify.sanitize(marked.parse(data.reply || "No response."));
+                currentChat.messages.push({ role: "assistant", content: data.reply });
+                saveChats();
 
             } catch (err) {
-                appendMessage('ai', `**Critical System Error:** ${err.message}. Ensure your Hugging Face Space is active.`);
+                aiBubble.innerHTML = `<span class="text-red-500 font-medium">Error: ${err.message}. Please check if the backend server is running.</span>`;
+                currentChat.messages.pop(); // Remove failed message
             } finally {
-                setLoading(false);
+                toggleLoading(false);
             }
         }
 
-        function setLoading(status) {
-            document.getElementById('btn-icon').classList.toggle('hidden', status);
-            document.getElementById('btn-spinner').classList.toggle('hidden', !status);
-            document.getElementById('send-btn').disabled = status;
-        }
-
-        function nukeStorage() {
-            if(confirm("Wipe all system history?")) {
-                localStorage.removeItem('fase_history_v5');
-                location.reload();
+        // --- RENDERERS ---
+        function appendUserMessage(text, fileData = null) {
+            const wrap = document.createElement('div');
+            wrap.className = "flex justify-end mb-4";
+            
+            const bubble = document.createElement('div');
+            bubble.className = "bg-gray-100 text-black px-4 py-3 rounded-2xl rounded-tr-sm max-w-[85%] sm:max-w-[70%] text-sm shadow-sm";
+            
+            if (fileData && fileData.data) {
+                if(fileData.mime.includes('image')) {
+                    bubble.innerHTML += `<img src="${fileData.data}" class="max-w-[200px] rounded-lg mb-2 border border-gray-200">`;
+                } else {
+                    bubble.innerHTML += `<div class="bg-white border border-gray-200 p-2 rounded-lg text-xs font-medium mb-2 flex items-center gap-2"><span class="text-lg">📎</span> ${fileData.name}</div>`;
+                }
             }
+            if (text) bubble.innerHTML += `<p class="whitespace-pre-wrap">${text}</p>`;
+            
+            wrap.appendChild(bubble);
+            chatBox.appendChild(wrap);
+            chatBox.scrollTop = chatBox.scrollHeight;
         }
 
-        function copyIDE() {
-            const code = document.getElementById('ide-display').innerText;
-            navigator.clipboard.writeText(code);
-            alert("Code copied to clipboard!");
+        function appendAIMessage(text) {
+            const bubble = createEmptyAIBubble();
+            bubble.innerHTML = DOMPurify.sanitize(marked.parse(text));
         }
 
-        // Start in Chat Mode
-        setMode('chat');
+        function createEmptyAIBubble() {
+            const wrap = document.createElement('div');
+            wrap.className = "flex justify-start mb-4";
+            
+            const avatar = document.createElement('div');
+            avatar.className = "w-8 h-8 bg-black text-white rounded-full flex items-center justify-center font-bold text-xs mr-3 shrink-0 mt-1";
+            avatar.innerText = "F";
+
+            const bubble = document.createElement('div');
+            bubble.className = "bg-white border border-gray-200 px-4 py-3 rounded-2xl rounded-tl-sm max-w-[85%] sm:max-w-[75%] markdown-body shadow-sm";
+            
+            wrap.appendChild(avatar);
+            wrap.appendChild(bubble);
+            chatBox.appendChild(wrap);
+            chatBox.scrollTop = chatBox.scrollHeight;
+            return bubble;
+        }
+
+        userInput.addEventListener("keypress", (e) => { 
+            if(e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendMessage(); }
+        });
     </script>
 </body>
 </html>
