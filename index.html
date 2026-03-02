@@ -119,219 +119,136 @@
     </div>
 
     <script>
-        const FASTAPI_URL = "https://lord123hh-shsj.hf.space/chat"; 
-        let sessionUserName = "User";
-        let activeModel = "pro";
-        let currentImageBase64 = null;
-        let chats = JSON.parse(localStorage.getItem('fase_chats')) || [];
-        let activeChatId = null;
+<script>
+const API_URL = "https://lord123hh-shsj.hf.space/chat";
 
-        // UI Initialization
-        const tosModal = document.getElementById('tos-modal');
-        const mainApp = document.getElementById('main-app');
-        const userDisplay = document.getElementById('user-display');
-        const chatBox = document.getElementById('chat-box');
-        const sidebarHistory = document.getElementById('sidebar-history');
-        const sidebar = document.getElementById('sidebar');
-        const sidebarBackdrop = document.getElementById('sidebar-backdrop');
+let currentChat = {
+    id: Date.now(),
+    title: "New Chat",
+    messages: []
+};
 
-        if (!localStorage.getItem('fase_agreed')) {
-            tosModal.classList.remove('hidden');
+let currentImageBase64 = null;
+let activeModel = "pro";
+
+function addMessage(role, content, image = null) {
+    const chatContainer = document.getElementById("chatContainer");
+
+    const messageDiv = document.createElement("div");
+    messageDiv.className = `message ${role}`;
+
+    if (image) {
+        const img = document.createElement("img");
+        img.src = image;
+        img.style.maxWidth = "200px";
+        img.style.borderRadius = "10px";
+        messageDiv.appendChild(img);
+    }
+
+    if (content) {
+        const textDiv = document.createElement("div");
+        textDiv.textContent = content;
+        messageDiv.appendChild(textDiv);
+    }
+
+    chatContainer.appendChild(messageDiv);
+    chatContainer.scrollTop = chatContainer.scrollHeight;
+}
+
+function setModel(model) {
+    activeModel = model;
+
+    document.querySelectorAll(".model-btn").forEach(btn => {
+        btn.classList.remove("active");
+    });
+
+    document.getElementById(model + "Btn").classList.add("active");
+}
+
+function clearImage() {
+    currentImageBase64 = null;
+    document.getElementById("imagePreview").innerHTML = "";
+}
+
+function handleImageUpload(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        currentImageBase64 = e.target.result;
+
+        const preview = document.getElementById("imagePreview");
+        preview.innerHTML = `<img src="${currentImageBase64}" style="max-width:150px;border-radius:10px;">`;
+    };
+
+    reader.readAsDataURL(file);
+}
+
+async function sendMessage() {
+    const input = document.getElementById("messageInput");
+    const text = input.value.trim();
+
+    if (!text && !currentImageBase64) return;
+
+    const savedImage = currentImageBase64;
+
+    // Show user message
+    addMessage("user", text, savedImage);
+    currentChat.messages.push({ role: "user", content: text, image: savedImage });
+
+    input.value = "";
+    clearImage();
+
+    const apiHistory = currentChat.messages.slice(0, -1).map(m => ({
+        role: m.role,
+        content: m.content || "Image attached"
+    }));
+
+    const payload = {
+        prompt: text || "Analyze this image.",
+        history: apiHistory,
+        model_tier: activeModel
+    };
+
+    if (savedImage) {
+        payload.image_base64 = savedImage;
+    }
+
+    console.log("Sending payload:", payload); // DEBUG
+
+    try {
+        const response = await fetch(API_URL, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload)
+        });
+
+        const data = await response.json();
+
+        if (data.reply) {
+            addMessage("assistant", data.reply);
+            currentChat.messages.push({ role: "assistant", content: data.reply });
         } else {
-            sessionUserName = localStorage.getItem('fase_username') || "User";
-            initApp();
+            addMessage("assistant", "No reply received.");
         }
 
-        document.getElementById('agreeBtn').addEventListener('click', () => {
-            const name = document.getElementById('userNameInput').value.trim() || "User";
-            localStorage.setItem('fase_agreed', 'true');
-            localStorage.setItem('fase_username', name);
-            sessionUserName = name;
-            tosModal.classList.add('hidden');
-            initApp();
-        });
+    } catch (error) {
+        addMessage("assistant", "Error connecting to server.");
+        console.error(error);
+    }
+}
 
-        function initApp() {
-            userDisplay.innerText = sessionUserName.toUpperCase();
-            mainApp.classList.remove('hidden');
-            setTimeout(() => { mainApp.classList.remove('opacity-0'); }, 50);
-            if (chats.length === 0) createNewChat();
-            else loadChat(chats[0].id);
-            renderSidebar();
-        }
+document.getElementById("sendBtn").addEventListener("click", sendMessage);
 
-        // Hamburger Menu Logic
-        function toggleSidebar() {
-            const isOpen = sidebar.classList.contains('sidebar-open');
-            if (isOpen) {
-                sidebar.classList.remove('sidebar-open');
-                sidebar.classList.add('sidebar-closed');
-                sidebarBackdrop.classList.add('hidden');
-            } else {
-                sidebar.classList.remove('sidebar-closed');
-                sidebar.classList.add('sidebar-open');
-                sidebarBackdrop.classList.remove('hidden');
-            }
-        }
+document.getElementById("messageInput").addEventListener("keypress", function(e) {
+    if (e.key === "Enter") {
+        sendMessage();
+    }
+});
 
-        function setModel(modelName) {
-            activeModel = modelName;
-            document.querySelectorAll('[id^="btn-"]').forEach(btn => {
-                btn.classList.remove('model-active');
-                btn.classList.add('model-inactive');
-            });
-            const activeBtn = document.getElementById(`btn-${modelName}`);
-            activeBtn.classList.remove('model-inactive');
-            activeBtn.classList.add('model-active');
-        }
-
-        function handleImageSelect(event) {
-            const file = event.target.files[0];
-            if (!file) return;
-            const reader = new FileReader();
-            reader.onload = function(e) {
-                currentImageBase64 = e.target.result;
-                document.getElementById('imagePreview').src = currentImageBase64;
-                document.getElementById('imagePreviewContainer').classList.remove('hidden');
-            };
-            reader.readAsDataURL(file);
-        }
-
-        function clearImage() {
-            currentImageBase64 = null;
-            document.getElementById('imageInput').value = "";
-            document.getElementById('imagePreviewContainer').classList.add('hidden');
-        }
-
-        function createNewChat() {
-            const newChat = { id: Date.now().toString(), title: "New Chat", messages: [] };
-            chats.unshift(newChat);
-            saveChats();
-            loadChat(newChat.id);
-            renderSidebar();
-            if(window.innerWidth < 768) toggleSidebar(); // Close menu on mobile
-        }
-
-        function loadChat(chatId) {
-            activeChatId = chatId;
-            chatBox.innerHTML = '';
-            const chat = chats.find(c => c.id === chatId);
-            
-            if (chat && chat.messages.length > 0) {
-                chat.messages.forEach(msg => {
-                    if(msg.role === 'user') appendUserMessage(msg.content, msg.image);
-                    else appendAIMessage(msg.content);
-                });
-            } else {
-                appendAIMessage(`Systems initialized, ${sessionUserName}. Fase is online.`);
-            }
-            renderSidebar();
-            if(window.innerWidth < 768 && sidebar.classList.contains('sidebar-open')) toggleSidebar();
-        }
-
-        function saveChats() { localStorage.setItem('fase_chats', JSON.stringify(chats)); }
-
-        function renderSidebar() {
-            sidebarHistory.innerHTML = '';
-            chats.forEach(chat => {
-                const btn = document.createElement('button');
-                const isActive = chat.id === activeChatId;
-                btn.className = `w-full text-left px-3 py-2 mt-1 rounded-lg text-sm truncate transition-all ${isActive ? 'bg-black text-white' : 'text-gray-600 hover:bg-gray-200'}`;
-                btn.innerText = chat.title;
-                btn.onclick = () => loadChat(chat.id);
-                sidebarHistory.appendChild(btn);
-            });
-        }
-
-        async function sendMessage() {
-            const text = document.getElementById('userInput').value.trim();
-            const hasImage = currentImageBase64 !== null;
-            if (!text && !hasImage) return;
-
-            const currentChat = chats.find(c => c.id === activeChatId);
-            if (currentChat.messages.length === 0) {
-                currentChat.title = text ? text.substring(0, 20) + "..." : "Image Upload";
-                renderSidebar();
-            }
-
-            appendUserMessage(text, currentImageBase64);
-            const savedImage = currentImageBase64; 
-            currentChat.messages.push({ role: "user", content: text, image: savedImage });
-            saveChats();
-
-            document.getElementById('userInput').value = '';
-            clearImage();
-            
-            const aiBubble = createEmptyAIBubble();
-            aiBubble.innerHTML = `<span class="text-gray-400 italic text-sm">Processing...</span>`;
-
-            try {
-                const apiHistory = currentChat.messages.slice(0, -1).map(m => ({
-                    role: m.role,
-                    content: m.content || "Attached an image."
-                }));
-
-                const payload = { prompt: text || "Analyze this.", history: apiHistory, model_tier: activeModel, image_base64: savedImage };
-
-                const response = await fetch(FASTAPI_URL, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(payload)
-                });
-
-                if (!response.ok) throw new Error(`HTTP Error: ${response.status}`);
-
-                const data = await response.json();
-                aiBubble.innerHTML = marked.parse(data.reply);
-                
-                currentChat.messages.push({ role: "assistant", content: data.reply });
-                saveChats();
-
-            } catch (err) {
-                aiBubble.innerHTML = `<span class="text-red-500 text-sm">Error connecting to Fase core. Check Hugging Face logs.</span>`;
-            }
-        }
-
-        function appendUserMessage(text, imageBase64 = null) {
-            const wrapper = document.createElement('div');
-            wrapper.className = "flex flex-col items-end ml-auto max-w-[90%] sm:max-w-[85%]";
-            const label = document.createElement('span');
-            label.className = "text-[10px] text-gray-400 font-semibold uppercase mb-1 mr-1";
-            label.innerText = sessionUserName;
-            const bubble = document.createElement('div');
-            bubble.className = "bg-black text-white p-3 rounded-2xl rounded-tr-sm shadow-sm";
-            if (imageBase64) bubble.innerHTML += `<img src="${imageBase64}" class="max-w-[150px] sm:max-w-[200px] rounded-lg mb-2 opacity-90 border border-gray-700">`;
-            if (text) bubble.innerHTML += `<p class="text-sm">${text}</p>`;
-            wrapper.appendChild(label);
-            wrapper.appendChild(bubble);
-            chatBox.appendChild(wrapper);
-            chatBox.scrollTop = chatBox.scrollHeight;
-        }
-
-        function appendAIMessage(markdownText) {
-            const bubble = createEmptyAIBubble();
-            bubble.innerHTML = marked.parse(markdownText);
-        }
-
-        function createEmptyAIBubble() {
-            const wrapper = document.createElement('div');
-            wrapper.className = "flex flex-col items-start max-w-[95%] sm:max-w-[85%]";
-            const label = document.createElement('span');
-            label.className = "text-[10px] text-gray-400 font-semibold uppercase mb-1 ml-1";
-            label.innerText = "FASE";
-            const bubble = document.createElement('div');
-            bubble.className = "bg-gray-50 border border-gray-100 p-3 rounded-2xl rounded-tl-sm text-gray-800 markdown-body text-sm w-full shadow-sm overflow-x-auto";
-            wrapper.appendChild(label);
-            wrapper.appendChild(bubble);
-            chatBox.appendChild(wrapper);
-            chatBox.scrollTop = chatBox.scrollHeight;
-            return bubble; 
-        }
-
-        document.getElementById('sendBtn').addEventListener("click", sendMessage);
-        document.getElementById('userInput').addEventListener("keypress", (e) => { 
-            if(e.key === "Enter") { e.preventDefault(); sendMessage(); }
-        });
+document.getElementById("imageInput").addEventListener("change", handleImageUpload);
+</script>
     </script>
 </body>
 </html>
