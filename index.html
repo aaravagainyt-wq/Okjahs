@@ -2,140 +2,150 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Stylus AI | Pro Interface</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Fase</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     
     <style>
-        body { background: #ffffff; color: #000000; font-family: 'Inter', sans-serif; overflow: hidden; height: 100vh; display: flex; }
-        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        /* 100dvh ensures it fits mobile screens perfectly without URL bar clipping */
+        body { background: #ffffff; color: #000000; font-family: 'Inter', sans-serif; overflow: hidden; height: 100dvh; display: flex; }
+        ::-webkit-scrollbar { width: 4px; height: 4px; }
         ::-webkit-scrollbar-track { background: transparent; }
         ::-webkit-scrollbar-thumb { background: #e5e5e5; border-radius: 4px; }
-        ::-webkit-scrollbar-thumb:hover { background: #cccccc; }
-
-        .markdown-body p { margin-bottom: 0.75rem; line-height: 1.6; }
-        .markdown-body pre { background: #f5f5f5; padding: 16px; border-radius: 8px; border: 1px solid #e5e5e5; overflow-x: auto; margin: 12px 0; font-size: 0.875rem; }
-        .markdown-body code { font-family: monospace; background: #f5f5f5; padding: 2px 6px; border-radius: 4px; font-size: 0.875rem; border: 1px solid #e5e5e5; }
-        .markdown-body pre code { background: transparent; padding: 0; border: none; }
+        
+        .markdown-body p { margin-bottom: 0.75rem; line-height: 1.5; }
+        .markdown-body pre { background: #f5f5f5; padding: 12px; border-radius: 8px; border: 1px solid #e5e5e5; overflow-x: auto; margin: 8px 0; font-size: 0.85rem; }
+        .markdown-body code { font-family: monospace; background: #f5f5f5; padding: 2px 4px; border-radius: 4px; font-size: 0.85rem; }
+        .markdown-body pre code { background: transparent; padding: 0; }
         .markdown-body strong { font-weight: 600; }
-        .markdown-body ul { list-style-type: disc; margin-left: 24px; margin-bottom: 12px; }
+        .markdown-body ul { list-style-type: disc; margin-left: 20px; margin-bottom: 8px; }
         
         .typing-cursor::after { content: '█'; animation: blink 1s step-end infinite; margin-left: 4px; }
         @keyframes blink { 50% { opacity: 0; } }
 
-        /* Active Model Button State */
         .model-active { background-color: #000; color: #fff; border-color: #000; }
         .model-inactive { background-color: #fff; color: #666; border-color: #e5e5e5; }
-        .model-inactive:hover { background-color: #f5f5f5; color: #000; }
+        
+        /* Mobile Sidebar Transitions */
+        #sidebar { transition: transform 0.3s ease-in-out; }
+        .sidebar-open { transform: translateX(0); }
+        .sidebar-closed { transform: translateX(-100%); }
+        @media (min-width: 768px) { .sidebar-closed { transform: translateX(0); } }
     </style>
 </head>
 <body class="antialiased">
 
-    <div id="tos-modal" class="fixed inset-0 bg-white z-50 flex flex-col items-center justify-center p-6 hidden">
-        <div class="max-w-md w-full space-y-8">
+    <div id="tos-modal" class="fixed inset-0 bg-white z-[60] flex flex-col items-center justify-center p-6 hidden">
+        <div class="max-w-md w-full space-y-6">
             <div>
-                <h2 class="text-2xl font-semibold tracking-tight">Welcome to STYLUS_AI</h2>
-                <p class="text-gray-500 mt-2 text-sm">Please review the safety protocols before continuing.</p>
+                <h2 class="text-2xl font-bold tracking-tight">Welcome to Fase</h2>
+                <p class="text-gray-500 mt-2 text-sm">Review safety protocols to initialize.</p>
             </div>
-            <div class="bg-gray-50 border border-gray-200 p-4 rounded-lg text-sm text-gray-700 h-48 overflow-y-auto space-y-3">
-                <p><strong>1. Experimental Nature:</strong> This AI model is experimental and can hallucinate facts or code.</p>
-                <p><strong>2. No Liability:</strong> The creator assumes zero liability for damages or issues arising from use.</p>
-                <p><strong>3. Data Privacy:</strong> Do not input sensitive personal data or confidential source code.</p>
+            <div class="bg-gray-50 border border-gray-200 p-4 rounded-lg text-sm text-gray-700 h-40 overflow-y-auto space-y-2">
+                <p><strong>1. Experimental:</strong> AI can make mistakes.</p>
+                <p><strong>2. Safety Protocol:</strong> Fase is bound by strict rules against harm, discrimination, and illegal activity.</p>
+                <p><strong>3. Privacy:</strong> Do not input sensitive personal data.</p>
             </div>
             <div class="space-y-4">
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Enter your designation (Name)</label>
-                    <input type="text" id="userNameInput" placeholder="Aarav" class="w-full border border-gray-300 rounded-lg px-4 py-3 outline-none focus:border-black focus:ring-1 focus:ring-black transition-all">
-                </div>
-                <button id="agreeBtn" class="w-full bg-black text-white font-medium px-6 py-3 rounded-lg hover:bg-gray-800 transition-all">I Agree & Initialize</button>
+                <input type="text" id="userNameInput" placeholder="Your Name" class="w-full border border-gray-300 rounded-lg px-4 py-3 outline-none focus:border-black">
+                <button id="agreeBtn" class="w-full bg-black text-white font-medium px-6 py-3 rounded-lg hover:bg-gray-800 transition-all">Agree & Enter</button>
             </div>
         </div>
     </div>
 
-    <div id="main-app" class="w-full h-full flex hidden opacity-0 transition-opacity duration-500">
+    <div id="main-app" class="w-full h-full flex hidden opacity-0 transition-opacity duration-300 relative">
         
-        <div class="w-64 bg-gray-50 border-r border-gray-200 flex flex-col hidden md:flex shrink-0">
-            <div class="p-4 border-b border-gray-200">
-                <h1 class="text-lg font-bold tracking-tight mb-4">STYLUS_AI</h1>
+        <div id="sidebar-backdrop" onclick="toggleSidebar()" class="fixed inset-0 bg-black/20 z-40 hidden md:hidden"></div>
+
+        <div id="sidebar" class="sidebar-closed absolute md:relative z-50 w-64 h-full bg-gray-50 border-r border-gray-200 flex flex-col shrink-0 shadow-xl md:shadow-none">
+            <div class="p-4 border-b border-gray-200 flex justify-between items-center">
+                <h1 class="text-lg font-bold tracking-tight">Fase</h1>
+                <button onclick="toggleSidebar()" class="md:hidden p-2 text-gray-500 hover:text-black">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                </button>
+            </div>
+            <div class="p-3">
                 <button onclick="createNewChat()" class="w-full bg-white border border-gray-200 text-sm font-medium py-2 rounded-lg hover:bg-gray-100 transition-all flex items-center justify-center gap-2">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
                     New Chat
                 </button>
             </div>
-            <div id="sidebar-history" class="flex-1 overflow-y-auto p-3 space-y-2">
-                </div>
-            <div class="p-4 border-t border-gray-200 text-xs text-gray-400 text-center">
+            <div id="sidebar-history" class="flex-1 overflow-y-auto p-3 space-y-1"></div>
+            <div class="p-4 border-t border-gray-200 text-xs text-gray-400">
                 User: <span id="user-display" class="font-semibold text-gray-600"></span>
             </div>
         </div>
 
-        <div class="flex-1 flex flex-col min-w-0 bg-white relative">
+        <div class="flex-1 flex flex-col min-w-0 bg-white relative h-full">
             
-            <div class="p-4 border-b border-gray-200 flex flex-col sm:flex-row justify-between items-center gap-3 z-10 bg-white/90 backdrop-blur-sm absolute top-0 w-full">
-                <div class="md:hidden font-bold tracking-tight text-lg w-full text-center">STYLUS_AI</div>
+            <div class="p-3 sm:p-4 border-b border-gray-200 flex justify-between items-center bg-white/95 backdrop-blur-sm z-10 shrink-0">
                 
-                <div class="flex items-center p-1 bg-gray-100 rounded-lg mx-auto md:mx-0">
-                    <button onclick="setModel('flash')" id="btn-flash" class="px-4 py-1.5 text-xs font-semibold rounded-md border model-inactive transition-all">Flash (Fast)</button>
-                    <button onclick="setModel('pro')" id="btn-pro" class="px-4 py-1.5 text-xs font-semibold rounded-md border model-active transition-all">Pro (Smart)</button>
-                    <button onclick="setModel('thinking')" id="btn-thinking" class="px-4 py-1.5 text-xs font-semibold rounded-md border model-inactive transition-all">Thinking (Deep)</button>
+                <div class="flex items-center gap-3">
+                    <button onclick="toggleSidebar()" class="md:hidden p-1 text-gray-600 hover:text-black active:scale-95">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path></svg>
+                    </button>
+                    <span class="font-bold tracking-tight md:hidden">Fase</span>
+                </div>
+                
+                <div class="flex items-center p-1 bg-gray-100 rounded-lg overflow-x-auto hide-scrollbar max-w-[60vw]">
+                    <button onclick="setModel('flash')" id="btn-flash" class="px-3 sm:px-4 py-1.5 text-[11px] sm:text-xs font-semibold rounded-md border model-inactive shrink-0">Flash</button>
+                    <button onclick="setModel('pro')" id="btn-pro" class="px-3 sm:px-4 py-1.5 text-[11px] sm:text-xs font-semibold rounded-md border model-active shrink-0">Pro</button>
+                    <button onclick="setModel('thinking')" id="btn-thinking" class="px-3 sm:px-4 py-1.5 text-[11px] sm:text-xs font-semibold rounded-md border model-inactive shrink-0">Thinking</button>
                 </div>
             </div>
 
-            <div id="chat-box" class="flex-1 overflow-y-auto p-4 sm:p-6 space-y-6 mt-20 sm:mt-16 mb-24">
-                </div>
+            <div id="chat-box" class="flex-1 overflow-y-auto p-4 sm:p-6 space-y-6 pb-4"></div>
 
-            <div class="absolute bottom-0 w-full bg-white border-t border-gray-200 p-3 sm:p-4">
-                
+            <div class="w-full bg-white border-t border-gray-200 p-3 shrink-0 pb-safe">
                 <div id="imagePreviewContainer" class="hidden mb-2 relative inline-block">
-                    <img id="imagePreview" src="" class="h-16 w-16 object-cover rounded-md border border-gray-300">
-                    <button onclick="clearImage()" class="absolute -top-2 -right-2 bg-black text-white rounded-full w-5 h-5 flex items-center justify-center text-xs hover:scale-110 transition-all">×</button>
+                    <img id="imagePreview" src="" class="h-12 w-12 object-cover rounded-md border border-gray-300">
+                    <button onclick="clearImage()" class="absolute -top-2 -right-2 bg-black text-white rounded-full w-5 h-5 flex items-center justify-center text-xs">×</button>
                 </div>
-
+                
                 <div class="flex items-end gap-2 max-w-4xl mx-auto">
-                    <label class="cursor-pointer p-3 bg-gray-50 border border-gray-200 rounded-xl hover:bg-gray-100 transition-all text-gray-500 shrink-0 mb-[1px]">
+                    <label class="cursor-pointer p-2 sm:p-3 bg-gray-50 border border-gray-200 rounded-xl hover:bg-gray-100 text-gray-500 shrink-0 mb-[1px]">
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13"></path></svg>
                         <input type="file" id="imageInput" accept="image/*" class="hidden" onchange="handleImageSelect(event)">
                     </label>
 
-                    <input type="text" id="userInput" placeholder="Ask anything, attach an image, or paste code..." class="flex-1 bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 outline-none focus:border-black transition-all text-sm h-[50px]">
+                    <input type="text" id="userInput" placeholder="Message Fase..." class="flex-1 bg-gray-50 border border-gray-200 rounded-xl px-3 sm:px-4 py-3 outline-none focus:border-black text-sm h-[44px] sm:h-[50px]">
                     
-                    <button id="sendBtn" class="bg-black text-white font-medium px-6 py-3 rounded-xl hover:bg-gray-800 active:scale-[0.98] transition-all text-sm h-[50px] shrink-0">Send</button>
+                    <button id="sendBtn" class="bg-black text-white font-medium px-4 sm:px-6 py-2 sm:py-3 rounded-xl hover:bg-gray-800 text-sm h-[44px] sm:h-[50px] shrink-0">Send</button>
                 </div>
             </div>
         </div>
     </div>
 
     <script>
-        // --- 1. STATE MANAGEMENT ---
         const FASTAPI_URL = "https://lord123hh-shsj.hf.space/chat"; 
         let sessionUserName = "User";
         let activeModel = "pro";
         let currentImageBase64 = null;
-        
-        // Chat History State
-        let chats = JSON.parse(localStorage.getItem('stylus_chats')) || [];
+        let chats = JSON.parse(localStorage.getItem('fase_chats')) || [];
         let activeChatId = null;
 
-        // --- 2. INITIALIZATION & ToS ---
+        // UI Initialization
         const tosModal = document.getElementById('tos-modal');
         const mainApp = document.getElementById('main-app');
         const userDisplay = document.getElementById('user-display');
         const chatBox = document.getElementById('chat-box');
         const sidebarHistory = document.getElementById('sidebar-history');
+        const sidebar = document.getElementById('sidebar');
+        const sidebarBackdrop = document.getElementById('sidebar-backdrop');
 
-        if (!localStorage.getItem('stylus_ai_agreed')) {
+        if (!localStorage.getItem('fase_agreed')) {
             tosModal.classList.remove('hidden');
         } else {
-            sessionUserName = localStorage.getItem('stylus_ai_username') || "User";
+            sessionUserName = localStorage.getItem('fase_username') || "User";
             initApp();
         }
 
         document.getElementById('agreeBtn').addEventListener('click', () => {
             const name = document.getElementById('userNameInput').value.trim() || "User";
-            localStorage.setItem('stylus_ai_agreed', 'true');
-            localStorage.setItem('stylus_ai_username', name);
+            localStorage.setItem('fase_agreed', 'true');
+            localStorage.setItem('fase_username', name);
             sessionUserName = name;
             tosModal.classList.add('hidden');
             initApp();
@@ -145,16 +155,25 @@
             userDisplay.innerText = sessionUserName.toUpperCase();
             mainApp.classList.remove('hidden');
             setTimeout(() => { mainApp.classList.remove('opacity-0'); }, 50);
-            
-            if (chats.length === 0) {
-                createNewChat();
-            } else {
-                loadChat(chats[0].id); // Load most recent chat
-            }
+            if (chats.length === 0) createNewChat();
+            else loadChat(chats[0].id);
             renderSidebar();
         }
 
-        // --- 3. MODEL TOGGLE ---
+        // Hamburger Menu Logic
+        function toggleSidebar() {
+            const isOpen = sidebar.classList.contains('sidebar-open');
+            if (isOpen) {
+                sidebar.classList.remove('sidebar-open');
+                sidebar.classList.add('sidebar-closed');
+                sidebarBackdrop.classList.add('hidden');
+            } else {
+                sidebar.classList.remove('sidebar-closed');
+                sidebar.classList.add('sidebar-open');
+                sidebarBackdrop.classList.remove('hidden');
+            }
+        }
+
         function setModel(modelName) {
             activeModel = modelName;
             document.querySelectorAll('[id^="btn-"]').forEach(btn => {
@@ -166,11 +185,9 @@
             activeBtn.classList.add('model-active');
         }
 
-        // --- 4. IMAGE HANDLING (Vision Eye) ---
         function handleImageSelect(event) {
             const file = event.target.files[0];
             if (!file) return;
-
             const reader = new FileReader();
             reader.onload = function(e) {
                 currentImageBase64 = e.target.result;
@@ -184,102 +201,77 @@
             currentImageBase64 = null;
             document.getElementById('imageInput').value = "";
             document.getElementById('imagePreviewContainer').classList.add('hidden');
-            document.getElementById('imagePreview').src = "";
         }
 
-        // --- 5. CHAT LOGIC & MEMORY ---
         function createNewChat() {
-            const newChat = {
-                id: Date.now().toString(),
-                title: "New Conversation",
-                messages: []
-            };
-            chats.unshift(newChat); // Add to top
+            const newChat = { id: Date.now().toString(), title: "New Chat", messages: [] };
+            chats.unshift(newChat);
             saveChats();
             loadChat(newChat.id);
             renderSidebar();
+            if(window.innerWidth < 768) toggleSidebar(); // Close menu on mobile
         }
 
         function loadChat(chatId) {
             activeChatId = chatId;
-            chatBox.innerHTML = ''; // Clear screen
+            chatBox.innerHTML = '';
             const chat = chats.find(c => c.id === chatId);
             
             if (chat && chat.messages.length > 0) {
-                // Render history
                 chat.messages.forEach(msg => {
                     if(msg.role === 'user') appendUserMessage(msg.content, msg.image);
                     else appendAIMessage(msg.content);
                 });
             } else {
-                // Generate Dynamic Greeting for fresh chat
-                const hour = new Date().getHours();
-                let timeGreeting = hour < 12 ? "Good morning" : hour < 17 ? "Good afternoon" : "Good evening";
-                appendAIMessage(`${timeGreeting}, ${sessionUserName}. Systems initialized. Set to ${activeModel.toUpperCase()} core.`);
+                appendAIMessage(`Systems initialized, ${sessionUserName}. Fase is online.`);
             }
-            
-            renderSidebar(); // Highlight active
+            renderSidebar();
+            if(window.innerWidth < 768 && sidebar.classList.contains('sidebar-open')) toggleSidebar();
         }
 
-        function saveChats() {
-            localStorage.setItem('stylus_chats', JSON.stringify(chats));
-        }
+        function saveChats() { localStorage.setItem('fase_chats', JSON.stringify(chats)); }
 
         function renderSidebar() {
             sidebarHistory.innerHTML = '';
             chats.forEach(chat => {
                 const btn = document.createElement('button');
                 const isActive = chat.id === activeChatId;
-                btn.className = `w-full text-left px-3 py-2 rounded-lg text-sm truncate transition-all ${isActive ? 'bg-black text-white' : 'text-gray-600 hover:bg-gray-200'}`;
+                btn.className = `w-full text-left px-3 py-2 mt-1 rounded-lg text-sm truncate transition-all ${isActive ? 'bg-black text-white' : 'text-gray-600 hover:bg-gray-200'}`;
                 btn.innerText = chat.title;
                 btn.onclick = () => loadChat(chat.id);
                 sidebarHistory.appendChild(btn);
             });
         }
 
-        // --- 6. CORE COMMUNICATION ---
         async function sendMessage() {
             const text = document.getElementById('userInput').value.trim();
             const hasImage = currentImageBase64 !== null;
-            
             if (!text && !hasImage) return;
 
-            // Grab the active chat array
             const currentChat = chats.find(c => c.id === activeChatId);
-            
-            // Auto-generate title on first message
             if (currentChat.messages.length === 0) {
-                currentChat.title = text ? text.substring(0, 20) + "..." : "Image Analysis";
+                currentChat.title = text ? text.substring(0, 20) + "..." : "Image Upload";
                 renderSidebar();
             }
 
-            // Save user message to UI and Array
             appendUserMessage(text, currentImageBase64);
-            const savedImage = currentImageBase64; // lock it in for payload
+            const savedImage = currentImageBase64; 
             currentChat.messages.push({ role: "user", content: text, image: savedImage });
             saveChats();
 
-            // Clear inputs
             document.getElementById('userInput').value = '';
             clearImage();
             
-            // Create loading bubble
             const aiBubble = createEmptyAIBubble();
-            aiBubble.innerHTML = `<span class="text-gray-400 italic text-sm">Processing via ${activeModel.toUpperCase()} core...</span>`;
+            aiBubble.innerHTML = `<span class="text-gray-400 italic text-sm">Processing...</span>`;
 
             try {
-                // Map frontend history to backend format (ignoring images in history to save payload size)
                 const apiHistory = currentChat.messages.slice(0, -1).map(m => ({
                     role: m.role,
                     content: m.content || "Attached an image."
                 }));
 
-                const payload = {
-                    prompt: text || "Describe this image.",
-                    history: apiHistory,
-                    model_tier: activeModel,
-                    image_base64: savedImage
-                };
+                const payload = { prompt: text || "Analyze this.", history: apiHistory, model_tier: activeModel, image_base64: savedImage };
 
                 const response = await fetch(FASTAPI_URL, {
                     method: 'POST',
@@ -287,44 +279,29 @@
                     body: JSON.stringify(payload)
                 });
 
-                if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+                if (!response.ok) throw new Error(`HTTP Error: ${response.status}`);
 
                 const data = await response.json();
-                const fullResponse = data.reply;
-
-                aiBubble.innerHTML = marked.parse(fullResponse);
-                aiBubble.classList.add("typing-cursor");
-                setTimeout(() => aiBubble.classList.remove("typing-cursor"), 1500); 
-
-                // Save AI response to memory
-                currentChat.messages.push({ role: "assistant", content: fullResponse });
+                aiBubble.innerHTML = marked.parse(data.reply);
+                
+                currentChat.messages.push({ role: "assistant", content: data.reply });
                 saveChats();
 
             } catch (err) {
-                console.error("Error:", err);
-                aiBubble.innerHTML = `<span class="text-red-500">Error: Unable to connect to backend. Check Hugging Face.</span>`;
+                aiBubble.innerHTML = `<span class="text-red-500 text-sm">Error connecting to Fase core. Check Hugging Face logs.</span>`;
             }
         }
 
-        // --- 7. UI RENDERERS ---
         function appendUserMessage(text, imageBase64 = null) {
             const wrapper = document.createElement('div');
-            wrapper.className = "flex flex-col items-end ml-auto max-w-[85%]";
-            
+            wrapper.className = "flex flex-col items-end ml-auto max-w-[90%] sm:max-w-[85%]";
             const label = document.createElement('span');
-            label.className = "text-[10px] text-gray-400 font-semibold uppercase tracking-wider mb-1 mr-1";
+            label.className = "text-[10px] text-gray-400 font-semibold uppercase mb-1 mr-1";
             label.innerText = sessionUserName;
-            
             const bubble = document.createElement('div');
-            bubble.className = "bg-black text-white p-3 sm:p-4 rounded-2xl rounded-tr-sm shadow-sm";
-            
-            if (imageBase64) {
-                bubble.innerHTML += `<img src="${imageBase64}" class="max-w-[200px] rounded-lg mb-2 opacity-90 border border-gray-700">`;
-            }
-            if (text) {
-                bubble.innerHTML += `<p class="text-sm">${text}</p>`;
-            }
-            
+            bubble.className = "bg-black text-white p-3 rounded-2xl rounded-tr-sm shadow-sm";
+            if (imageBase64) bubble.innerHTML += `<img src="${imageBase64}" class="max-w-[150px] sm:max-w-[200px] rounded-lg mb-2 opacity-90 border border-gray-700">`;
+            if (text) bubble.innerHTML += `<p class="text-sm">${text}</p>`;
             wrapper.appendChild(label);
             wrapper.appendChild(bubble);
             chatBox.appendChild(wrapper);
@@ -339,14 +316,11 @@
         function createEmptyAIBubble() {
             const wrapper = document.createElement('div');
             wrapper.className = "flex flex-col items-start max-w-[95%] sm:max-w-[85%]";
-            
             const label = document.createElement('span');
-            label.className = "text-[10px] text-gray-400 font-semibold uppercase tracking-wider mb-1 ml-1";
-            label.innerText = "STYLUS_AI";
-            
+            label.className = "text-[10px] text-gray-400 font-semibold uppercase mb-1 ml-1";
+            label.innerText = "FASE";
             const bubble = document.createElement('div');
-            bubble.className = "bg-gray-50 border border-gray-100 p-3 sm:p-4 rounded-2xl rounded-tl-sm text-gray-800 markdown-body text-sm w-full shadow-sm overflow-x-auto";
-            
+            bubble.className = "bg-gray-50 border border-gray-100 p-3 rounded-2xl rounded-tl-sm text-gray-800 markdown-body text-sm w-full shadow-sm overflow-x-auto";
             wrapper.appendChild(label);
             wrapper.appendChild(bubble);
             chatBox.appendChild(wrapper);
@@ -354,7 +328,6 @@
             return bubble; 
         }
 
-        // --- 8. LISTENERS ---
         document.getElementById('sendBtn').addEventListener("click", sendMessage);
         document.getElementById('userInput').addEventListener("keypress", (e) => { 
             if(e.key === "Enter") { e.preventDefault(); sendMessage(); }
