@@ -28,6 +28,9 @@
         .sidebar-open { transform: translateX(0); }
         .sidebar-closed { transform: translateX(-100%); }
         @media (min-width: 768px) { .sidebar-closed { transform: translateX(0); } }
+        
+        .spinner { animation: spin 1s linear infinite; }
+        @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
     </style>
 </head>
 <body class="antialiased">
@@ -108,7 +111,10 @@
 
                     <input type="text" id="userInput" placeholder="Message Fase..." class="flex-1 bg-gray-50 border border-gray-200 rounded-xl px-3 sm:px-4 py-3 outline-none focus:border-black text-sm h-[44px] sm:h-[50px]">
                     
-                    <button id="sendBtn" class="bg-black text-white font-medium px-4 sm:px-6 py-2 sm:py-3 rounded-xl hover:bg-gray-800 text-sm h-[44px] sm:h-[50px] shrink-0">Send</button>
+                    <button id="sendBtn" class="bg-black text-white font-medium px-4 sm:px-6 py-2 sm:py-3 rounded-xl hover:bg-gray-800 text-sm h-[44px] sm:h-[50px] shrink-0 flex items-center justify-center min-w-[80px]">
+                        <span id="sendBtnText">Send</span>
+                        <svg id="sendBtnLoader" class="hidden spinner w-5 h-5 text-white" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+                    </button>
                 </div>
             </div>
         </div>
@@ -131,6 +137,9 @@
         const sidebar = document.getElementById('sidebar');
         const sidebarBackdrop = document.getElementById('sidebar-backdrop');
         const serverStatus = document.getElementById('server-status');
+        const sendBtnText = document.getElementById('sendBtnText');
+        const sendBtnLoader = document.getElementById('sendBtnLoader');
+        const sendBtn = document.getElementById('sendBtn');
 
         if(typeof marked === "undefined"){ window.marked = { parse: (t) => t }; }
 
@@ -195,7 +204,6 @@
             activeBtn.classList.add('model-active');
         }
 
-        // UPGRADED: Canvas Image Resizing
         function handleImageSelect(event) {
             const file = event.target.files[0];
             if (!file) return;
@@ -205,8 +213,8 @@
                 const img = new Image();
                 img.onload = function() {
                     const canvas = document.createElement('canvas');
-                    const MAX_WIDTH = 800;
-                    const MAX_HEIGHT = 800;
+                    const MAX_WIDTH = 512;
+                    const MAX_HEIGHT = 512;
                     let width = img.width;
                     let height = img.height;
 
@@ -227,8 +235,9 @@
                     const ctx = canvas.getContext('2d');
                     ctx.drawImage(img, 0, 0, width, height);
 
-                    // Compress to 70% JPEG quality
-                    currentImageBase64 = canvas.toDataURL('image/jpeg', 0.7);
+                    currentImageBase64 = canvas.toDataURL('image/jpeg', 0.5);
+                    const payloadSizeKB = Math.round(currentImageBase64.length / 1024);
+                    console.log(`[Fase Debug] Compressed Image: ~${payloadSizeKB} KB`);
                     
                     document.getElementById('imagePreview').src = currentImageBase64;
                     document.getElementById('imagePreviewContainer').classList.remove('hidden');
@@ -284,10 +293,43 @@
             });
         }
 
+        async function fetchWithRetry(url, options, retries = 2) {
+            for (let i = 0; i < retries; i++) {
+                try {
+                    const response = await fetch(url, options);
+                    if (response.ok) return response;
+                    
+                    const errorData = await response.json().catch(() => ({}));
+                    if (response.status === 429 || response.status === 400) {
+                        throw new Error(errorData.detail || `HTTP Error: ${response.status}`);
+                    }
+                    if (i === retries - 1) throw new Error(errorData.detail || `Server asleep or Error: ${response.status}`);
+                    
+                } catch (err) {
+                    if (i === retries - 1) throw err;
+                    await new Promise(resolve => setTimeout(resolve, 3000));
+                }
+            }
+        }
+
+        function setSendingState(isSending) {
+            if (isSending) {
+                sendBtn.disabled = true;
+                sendBtnText.classList.add('hidden');
+                sendBtnLoader.classList.remove('hidden');
+            } else {
+                sendBtn.disabled = false;
+                sendBtnText.classList.remove('hidden');
+                sendBtnLoader.classList.add('hidden');
+            }
+        }
+
         async function sendMessage() {
             const text = document.getElementById('userInput').value.trim();
             const hasImage = currentImageBase64 !== null;
             if (!text && !hasImage) return;
+
+            setSendingState(true);
 
             const currentChat = chats.find(c => c.id === activeChatId);
             if (currentChat.messages.length === 0) {
@@ -304,7 +346,7 @@
             clearImage();
             
             const aiBubble = createEmptyAIBubble();
-            aiBubble.innerHTML = `<span class="text-gray-400 italic text-sm">Processing...</span>`;
+            aiBubble.innerHTML = `<span class="text-gray-400 italic text-sm animate-pulse">Connecting to Fase...</span>`;
 
             try {
                 const apiHistory = currentChat.messages.slice(0, -1).map(m => ({
@@ -314,27 +356,27 @@
 
                 const payload = { prompt: text || "Analyze this image.", history: apiHistory, model_tier: activeModel, image_base64: savedImage };
 
-                const response = await fetch(FASTAPI_URL, {
+                const response = await fetchWithRetry(FASTAPI_URL, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(payload)
                 });
 
-                if (!response.ok) {
-                    const errorData = await response.json();
-                    throw new Error(errorData.detail || `HTTP Error: ${response.status}`);
-                }
-
                 const data = await response.json();
                 
-                // UPGRADED: DOMPurify security
                 aiBubble.innerHTML = DOMPurify.sanitize(marked.parse(data.reply || "No response received."));
-                
                 currentChat.messages.push({ role: "assistant", content: data.reply });
                 saveChats();
 
             } catch (err) {
-                aiBubble.innerHTML = `<span class="text-red-500 text-sm">Error connecting to Fase core: ${err.message}</span>`;
+                aiBubble.innerHTML = `<div class="text-red-600 bg-red-50 p-2 rounded text-sm border border-red-200">
+                    <strong>Connection Failed:</strong> ${err.message}
+                    <br><span class="text-xs text-red-400">If the server is waking up, try sending again in 30 seconds.</span>
+                </div>`;
+                currentChat.messages.pop(); 
+                saveChats();
+            } finally {
+                setSendingState(false);
             }
         }
 
@@ -356,7 +398,6 @@
 
         function appendAIMessage(markdownText) {
             const bubble = createEmptyAIBubble();
-            // UPGRADED: DOMPurify security
             bubble.innerHTML = DOMPurify.sanitize(marked.parse(markdownText));
         }
 
