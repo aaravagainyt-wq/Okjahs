@@ -1,0 +1,90 @@
+/* --- BASE STYLES --- */
+body { 
+    font-family: 'Inter', sans-serif; 
+    background: #ffffff; 
+    color: #000000; 
+    overflow: hidden; 
+    height: 100dvh; 
+}
+
+/* --- CUSTOM SCROLLBAR --- */
+::-webkit-scrollbar { 
+    width: 5px; 
+}
+::-webkit-scrollbar-thumb { 
+    background: #e5e5e5; 
+    border-radius: 10px; 
+}
+::-webkit-scrollbar-thumb:hover { 
+    background: #cccccc; 
+}
+
+/* --- DRAG & DROP OVERLAY --- */
+#drag-overlay { 
+    transition: opacity 0.2s; 
+    background: rgba(255, 255, 255, 0.9); 
+    backdrop-filter: blur(4px); 
+}
+.drag-active { 
+    opacity: 1 !important; 
+    pointer-events: auto !important; 
+    z-index: 100; 
+}
+
+/* --- SIDEBAR ANIMATIONS --- */
+.sidebar { 
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1); 
+}
+.sidebar-open { 
+    transform: translateX(0); 
+}
+.sidebar-closed { 
+    transform: translateX(-100%); 
+}
+@media (min-width: 768px) { 
+    .sidebar-closed { transform: translateX(0); } 
+}
+
+/* --- MARKDOWN OVERRIDES (For AI Responses) --- */
+.markdown-body pre { 
+    background: #f9fafb; 
+    border: 1px solid #e5e5e5; 
+    padding: 12px; 
+    border-radius: 8px; 
+    overflow-x: auto; 
+    font-size: 0.85rem; 
+    margin: 10px 0; 
+}
+.markdown-body code { 
+    font-family: monospace; 
+    background: #f3f4f6; 
+    padding: 2px 4px; 
+    border-radius: 4px; 
+    font-size: 0.85rem; 
+}
+.markdown-body pre code { 
+    background: transparent; 
+    padding: 0; 
+}
+.markdown-body p { 
+    margin-bottom: 0.75rem; 
+    line-height: 1.6; 
+}
+.markdown-body strong { 
+    font-weight: 600; 
+}
+.markdown-body ul { 
+    list-style-type: disc; 
+    margin-left: 20px; 
+    margin-bottom: 8px; 
+}
+
+/* --- LOADING SPINNER ANIMATION --- */
+.spinner { 
+    animation: spin 1s linear infinite; 
+}
+@keyframes spin { 
+    from { transform: rotate(0deg); } 
+    to { transform: rotate(360deg); } 
+}
+
