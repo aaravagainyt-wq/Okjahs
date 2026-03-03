@@ -1,4 +1,3 @@
-
 // --- CORE SETTINGS ---
 const API_URL = "https://lord123hh-shsj.hf.space/chat"; 
 
@@ -15,22 +14,25 @@ const sidebar = document.getElementById('sidebar');
 const userInput = document.getElementById('user-input');
 const dragOverlay = document.getElementById('drag-overlay');
 
-// --- NEW: CUSTOM MARKDOWN IDE RENDERER ---
+// --- NEW: BULLETPROOF MARKDOWN IDE RENDERER ---
 if(typeof marked !== "undefined" && typeof hljs !== "undefined") {
     const renderer = new marked.Renderer();
-    renderer.code = function(code, language) {
-        const validLang = hljs.getLanguage(language) ? language : 'plaintext';
+    
+    renderer.code = function(arg1, arg2) {
+        // Fix for the e.replace crash: Handle both new (v13+) and old versions of marked.js
+        const code = typeof arg1 === 'object' ? (arg1.text || "") : (arg1 || "");
+        const language = typeof arg1 === 'object' ? (arg1.lang || "") : (arg2 || "");
+        
+        const validLang = (language && hljs.getLanguage(language)) ? language : 'plaintext';
         const highlighted = hljs.highlight(code, { language: validLang }).value;
-        // The safe string prevents quotes from breaking the HTML onclick function
-        const safeCode = encodeURIComponent(code);
         
         return `
-        <div class="my-4 rounded-xl overflow-hidden border border-gray-700 shadow-sm bg-[#1e1e1e]">
+        <div class="my-4 rounded-xl overflow-hidden border border-gray-700 shadow-sm bg-[#1e1e1e] code-block-wrapper">
             <div class="flex items-center justify-between px-4 py-2 bg-[#2d2d2d] border-b border-gray-700">
                 <span class="text-xs font-mono text-gray-300 uppercase tracking-wider">${validLang}</span>
-                <button onclick="copyToClipboard(this, decodeURIComponent('${safeCode}'))" class="text-xs text-gray-400 hover:text-white flex items-center gap-1 transition-colors">
+                <button class="copy-code-btn text-xs text-gray-400 hover:text-white flex items-center gap-1 transition-colors">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
-                    Copy Code
+                    <span>Copy Code</span>
                 </button>
             </div>
             <div class="p-4 overflow-x-auto">
@@ -52,19 +54,27 @@ window.copyToClipboard = function(btn, text) {
     });
 };
 
+// HELPER: Wires up the copy buttons AFTER DOMPurify runs
+function attachCodeCopyButtons(container) {
+    container.querySelectorAll('.copy-code-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            // Snags the exact code block right next to the button
+            const codeText = this.closest('.code-block-wrapper').querySelector('code').innerText;
+            copyToClipboard(this, codeText);
+        });
+    });
+}
+
 window.retryMessage = function() {
     const currentChat = chats.find(c => c.id === activeChatId);
     if(!currentChat || currentChat.messages.length < 2) return;
     
-    // Remove the failed AI message
     currentChat.messages.pop();
-    // Grab and remove the last User message
     const lastUserMsg = currentChat.messages.pop();
     
     saveChats();
     loadChat(activeChatId);
     
-    // Put it back in the input box and trigger send
     userInput.value = lastUserMsg.content;
     if(lastUserMsg.file) {
         currentFile = { ...lastUserMsg.file };
@@ -244,7 +254,7 @@ function loadChat(chatId) {
     if (chat && chat.messages.length > 0) {
         chat.messages.forEach(msg => {
             if(msg.role === 'user') appendUserMessage(msg.content, msg.file);
-            else appendAIMessage(msg.content, true); // True means don't show action bar for history
+            else appendAIMessage(msg.content, true); 
         });
     } else {
         appendAIMessage("Hi there. I'm Fase. How can I help you today?", true);
@@ -329,21 +339,22 @@ async function sendMessage() {
         const data = await response.json();
         const replyText = data.reply || "No response.";
         
-        // Render markdown and reveal the action bar!
         uiElements.contentDiv.innerHTML = DOMPurify.sanitize(marked.parse(replyText));
         
-        // Hook up the "Copy Text" button for this specific message
+        // WIRE UP THE BUTTONS AFTER DOMPURIFY
+        attachCodeCopyButtons(uiElements.contentDiv);
+        
         const copyBtn = uiElements.actionBar.querySelector('.copy-text-btn');
         copyBtn.onclick = function() { copyToClipboard(this, replyText); };
         
-        uiElements.actionBar.classList.remove('hidden'); // Show the bar!
+        uiElements.actionBar.classList.remove('hidden'); 
 
         currentChat.messages.push({ role: "assistant", content: replyText });
         saveChats();
 
     } catch (err) {
         uiElements.contentDiv.innerHTML = `<span class="text-red-600 font-bold border border-red-200 bg-red-50 p-2 rounded">SYSTEM ERROR: ${err.message}</span>`;
-        uiElements.actionBar.classList.remove('hidden'); // Show Retry button on failure
+        uiElements.actionBar.classList.remove('hidden'); 
         currentChat.messages.pop(); 
     } finally {
         toggleLoading(false);
@@ -373,7 +384,6 @@ function appendUserMessage(text, fileData = null) {
     chatBox.scrollTop = chatBox.scrollHeight;
 }
 
-// NEW: Action bar added to AI Bubble
 function createEmptyAIBubble() {
     if(!chatBox) return null;
     const wrap = document.createElement('div');
@@ -389,7 +399,6 @@ function createEmptyAIBubble() {
     const contentDiv = document.createElement('div');
     contentDiv.className = "markdown-body";
     
-    // NEW ACTION BAR
     const actionBar = document.createElement('div');
     actionBar.className = "hidden flex items-center gap-4 mt-3 pt-3 border-t border-gray-100";
     actionBar.innerHTML = `
@@ -417,6 +426,7 @@ function createEmptyAIBubble() {
 function appendAIMessage(text, isHistory = false) {
     const ui = createEmptyAIBubble();
     ui.contentDiv.innerHTML = DOMPurify.sanitize(marked.parse(text));
+    attachCodeCopyButtons(ui.contentDiv); // Wire up old code blocks
     
     if(!isHistory) {
         const copyBtn = ui.actionBar.querySelector('.copy-text-btn');
