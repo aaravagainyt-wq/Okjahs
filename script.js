@@ -14,12 +14,25 @@ const sidebar = document.getElementById('sidebar');
 const userInput = document.getElementById('user-input');
 const dragOverlay = document.getElementById('drag-overlay');
 
+// --- NEW: DYNAMIC MATH RENDERER (MATHJAX) ---
+// This injects beautiful textbook math rendering without touching HTML
+window.MathJax = {
+    tex: { 
+        inlineMath: [['$', '$'], ['\\(', '\\)']], 
+        displayMath: [['$$', '$$'], ['\\[', '\\]']] 
+    },
+    startup: { typeset: false }
+};
+const mathScript = document.createElement('script');
+mathScript.src = "https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js";
+mathScript.async = true;
+document.head.appendChild(mathScript);
+
 // --- NEW: BULLETPROOF MARKDOWN IDE RENDERER ---
 if(typeof marked !== "undefined" && typeof hljs !== "undefined") {
     const renderer = new marked.Renderer();
     
     renderer.code = function(arg1, arg2) {
-        // Fix for the e.replace crash: Handle both new (v13+) and old versions of marked.js
         const code = typeof arg1 === 'object' ? (arg1.text || "") : (arg1 || "");
         const language = typeof arg1 === 'object' ? (arg1.lang || "") : (arg2 || "");
         
@@ -40,7 +53,9 @@ if(typeof marked !== "undefined" && typeof hljs !== "undefined") {
             </div>
         </div>`;
     };
-    marked.use({ renderer });
+    
+    // breaks: true stops equations from stacking onto the same line!
+    marked.use({ renderer, breaks: true }); 
 } else {
     window.marked = { parse: (t) => t };
 }
@@ -54,11 +69,9 @@ window.copyToClipboard = function(btn, text) {
     });
 };
 
-// HELPER: Wires up the copy buttons AFTER DOMPurify runs
 function attachCodeCopyButtons(container) {
     container.querySelectorAll('.copy-code-btn').forEach(btn => {
         btn.addEventListener('click', function() {
-            // Snags the exact code block right next to the button
             const codeText = this.closest('.code-block-wrapper').querySelector('code').innerText;
             copyToClipboard(this, codeText);
         });
@@ -341,8 +354,12 @@ async function sendMessage() {
         
         uiElements.contentDiv.innerHTML = DOMPurify.sanitize(marked.parse(replyText));
         
-        // WIRE UP THE BUTTONS AFTER DOMPURIFY
         attachCodeCopyButtons(uiElements.contentDiv);
+        
+        // TRIGGER MATH RENDERER
+        if (window.MathJax && window.MathJax.typesetPromise) {
+            window.MathJax.typesetPromise([uiElements.contentDiv]).catch(err => console.log('Math error:', err));
+        }
         
         const copyBtn = uiElements.actionBar.querySelector('.copy-text-btn');
         copyBtn.onclick = function() { copyToClipboard(this, replyText); };
@@ -426,7 +443,11 @@ function createEmptyAIBubble() {
 function appendAIMessage(text, isHistory = false) {
     const ui = createEmptyAIBubble();
     ui.contentDiv.innerHTML = DOMPurify.sanitize(marked.parse(text));
-    attachCodeCopyButtons(ui.contentDiv); // Wire up old code blocks
+    attachCodeCopyButtons(ui.contentDiv); 
+    
+    if (window.MathJax && window.MathJax.typesetPromise) {
+        window.MathJax.typesetPromise([ui.contentDiv]).catch(err => console.log('Math error:', err));
+    }
     
     if(!isHistory) {
         const copyBtn = ui.actionBar.querySelector('.copy-text-btn');
@@ -440,3 +461,4 @@ if(userInput) {
         if(e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendMessage(); }
     });
 }
+
