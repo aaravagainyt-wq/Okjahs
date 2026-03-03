@@ -3,12 +3,15 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Fase AI</title>
+    <title>Fase</title>
     
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.0.6/purify.min.js"></script>
+    
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
     
     <link rel="stylesheet" href="style.css">
 </head>
@@ -126,7 +129,7 @@
                             <input type="file" id="file-input" class="hidden" onchange="handleFileSelect(event)">
                         </label>
                         
-                        <textarea id="user-input" rows="1" placeholder="Message Fase or drag & drop a file here..." class="flex-1 bg-transparent border-none py-3 px-2 text-sm focus:ring-0 outline-none resize-none max-h-32" oninput="this.style.height = 'auto'; this.style.height = this.scrollHeight + 'px'"></textarea>
+                        <textarea id="user-input" rows="1" placeholder="Message Fase, drop an image, or paste a YouTube link..." class="flex-1 bg-transparent border-none py-3 px-2 text-sm focus:ring-0 outline-none resize-none max-h-32" oninput="this.style.height = 'auto'; this.style.height = this.scrollHeight + 'px'"></textarea>
                         
                         <button id="send-btn" onclick="sendMessage()" class="m-1 p-2.5 bg-black text-white rounded-xl hover:bg-gray-800 transition-all shrink-0">
                             <svg id="send-icon" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"></path></svg>
