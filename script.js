@@ -1,9 +1,10 @@
+
 // --- CORE SETTINGS ---
 const API_URL = "https://lord123hh-shsj.hf.space/chat"; 
 
 let sessionUser = "User";
 let currentFile = { data: null, mime: null, name: null };
-let chats = JSON.parse(localStorage.getItem('fase_chats_bw_v2')) || [];
+let chats = JSON.parse(localStorage.getItem('fase_chats_pro_v3')) || [];
 let activeChatId = null;
 
 // --- DOM ELEMENTS ---
@@ -14,8 +15,64 @@ const sidebar = document.getElementById('sidebar');
 const userInput = document.getElementById('user-input');
 const dragOverlay = document.getElementById('drag-overlay');
 
-// Fallback for marked parser
-if(typeof marked === "undefined"){ window.marked = { parse: (t) => t }; }
+// --- NEW: CUSTOM MARKDOWN IDE RENDERER ---
+if(typeof marked !== "undefined" && typeof hljs !== "undefined") {
+    const renderer = new marked.Renderer();
+    renderer.code = function(code, language) {
+        const validLang = hljs.getLanguage(language) ? language : 'plaintext';
+        const highlighted = hljs.highlight(code, { language: validLang }).value;
+        // The safe string prevents quotes from breaking the HTML onclick function
+        const safeCode = encodeURIComponent(code);
+        
+        return `
+        <div class="my-4 rounded-xl overflow-hidden border border-gray-700 shadow-sm bg-[#1e1e1e]">
+            <div class="flex items-center justify-between px-4 py-2 bg-[#2d2d2d] border-b border-gray-700">
+                <span class="text-xs font-mono text-gray-300 uppercase tracking-wider">${validLang}</span>
+                <button onclick="copyToClipboard(this, decodeURIComponent('${safeCode}'))" class="text-xs text-gray-400 hover:text-white flex items-center gap-1 transition-colors">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
+                    Copy Code
+                </button>
+            </div>
+            <div class="p-4 overflow-x-auto">
+                <pre class="!m-0 !p-0"><code class="hljs language-${validLang} text-[13px] !bg-transparent">${highlighted}</code></pre>
+            </div>
+        </div>`;
+    };
+    marked.use({ renderer });
+} else {
+    window.marked = { parse: (t) => t };
+}
+
+// --- GLOBAL ACTIONS (Copy & Retry) ---
+window.copyToClipboard = function(btn, text) {
+    navigator.clipboard.writeText(text).then(() => {
+        const originalHTML = btn.innerHTML;
+        btn.innerHTML = `<svg class="w-4 h-4 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg> <span class="text-green-400">Copied!</span>`;
+        setTimeout(() => { btn.innerHTML = originalHTML; }, 2000);
+    });
+};
+
+window.retryMessage = function() {
+    const currentChat = chats.find(c => c.id === activeChatId);
+    if(!currentChat || currentChat.messages.length < 2) return;
+    
+    // Remove the failed AI message
+    currentChat.messages.pop();
+    // Grab and remove the last User message
+    const lastUserMsg = currentChat.messages.pop();
+    
+    saveChats();
+    loadChat(activeChatId);
+    
+    // Put it back in the input box and trigger send
+    userInput.value = lastUserMsg.content;
+    if(lastUserMsg.file) {
+        currentFile = { ...lastUserMsg.file };
+        setFileData(currentFile.data, currentFile.mime, currentFile.name || "Attached File");
+    }
+    sendMessage();
+};
+
 
 // --- LOGIN & TOS LOGIC ---
 const agreeCheck = document.getElementById('agreeCheck');
@@ -39,18 +96,18 @@ if(agreeCheck && userNameInput) {
     userNameInput.addEventListener('input', validateLogin);
 }
 
-if (!localStorage.getItem('fase_verified_v2')) {
+if (!localStorage.getItem('fase_verified_v3')) {
     if(tosModal) tosModal.classList.remove('hidden');
 } else {
-    sessionUser = localStorage.getItem('fase_user_alias_v2') || "User";
+    sessionUser = localStorage.getItem('fase_user_alias_v3') || "User";
     initApp();
 }
 
 if(loginBtn) {
     loginBtn.addEventListener('click', () => {
         const name = userNameInput.value.trim();
-        localStorage.setItem('fase_verified_v2', 'true');
-        localStorage.setItem('fase_user_alias_v2', name);
+        localStorage.setItem('fase_verified_v3', 'true');
+        localStorage.setItem('fase_user_alias_v3', name);
         sessionUser = name;
         tosModal.classList.add('hidden');
         initApp();
@@ -59,7 +116,7 @@ if(loginBtn) {
 
 function logout() {
     if(confirm("Are you sure you want to log out? This will require re-accepting the terms.")) {
-        localStorage.removeItem('fase_verified_v2');
+        localStorage.removeItem('fase_verified_v3');
         location.reload();
     }
 }
@@ -187,15 +244,15 @@ function loadChat(chatId) {
     if (chat && chat.messages.length > 0) {
         chat.messages.forEach(msg => {
             if(msg.role === 'user') appendUserMessage(msg.content, msg.file);
-            else appendAIMessage(msg.content);
+            else appendAIMessage(msg.content, true); // True means don't show action bar for history
         });
     } else {
-        appendAIMessage("Hi there. I'm Fase. How can I help you today?");
+        appendAIMessage("Hi there. I'm Fase. How can I help you today?", true);
     }
     renderSidebar();
 }
 
-function saveChats() { localStorage.setItem('fase_chats_bw_v2', JSON.stringify(chats)); }
+function saveChats() { localStorage.setItem('fase_chats_pro_v3', JSON.stringify(chats)); }
 
 function renderSidebar() {
     const list = document.getElementById('sidebar-history');
@@ -239,8 +296,8 @@ async function sendMessage() {
     userInput.style.height = 'auto';
     clearFile();
 
-    const aiBubble = createEmptyAIBubble();
-    aiBubble.innerHTML = `<span class="text-gray-400">Thinking...</span>`;
+    const uiElements = createEmptyAIBubble();
+    uiElements.contentDiv.innerHTML = `<span class="text-gray-400">Thinking...</span>`;
 
     try {
         const apiHistory = currentChat.messages.map(m => ({
@@ -270,14 +327,24 @@ async function sendMessage() {
         }
 
         const data = await response.json();
+        const replyText = data.reply || "No response.";
         
-        aiBubble.innerHTML = DOMPurify.sanitize(marked.parse(data.reply || "No response."));
-        currentChat.messages.push({ role: "assistant", content: data.reply });
+        // Render markdown and reveal the action bar!
+        uiElements.contentDiv.innerHTML = DOMPurify.sanitize(marked.parse(replyText));
+        
+        // Hook up the "Copy Text" button for this specific message
+        const copyBtn = uiElements.actionBar.querySelector('.copy-text-btn');
+        copyBtn.onclick = function() { copyToClipboard(this, replyText); };
+        
+        uiElements.actionBar.classList.remove('hidden'); // Show the bar!
+
+        currentChat.messages.push({ role: "assistant", content: replyText });
         saveChats();
 
     } catch (err) {
-        aiBubble.innerHTML = `<span class="text-red-600 font-bold border border-red-200 bg-red-50 p-2 rounded">SYSTEM ERROR: ${err.message}</span>`;
-        currentChat.messages.pop(); // Remove failed message
+        uiElements.contentDiv.innerHTML = `<span class="text-red-600 font-bold border border-red-200 bg-red-50 p-2 rounded">SYSTEM ERROR: ${err.message}</span>`;
+        uiElements.actionBar.classList.remove('hidden'); // Show Retry button on failure
+        currentChat.messages.pop(); 
     } finally {
         toggleLoading(false);
     }
@@ -306,28 +373,56 @@ function appendUserMessage(text, fileData = null) {
     chatBox.scrollTop = chatBox.scrollHeight;
 }
 
-function appendAIMessage(text) {
-    const bubble = createEmptyAIBubble();
-    if(bubble) bubble.innerHTML = DOMPurify.sanitize(marked.parse(text));
-}
-
+// NEW: Action bar added to AI Bubble
 function createEmptyAIBubble() {
     if(!chatBox) return null;
     const wrap = document.createElement('div');
-    wrap.className = "flex justify-start mb-4";
+    wrap.className = "flex justify-start mb-4 group";
     
     const avatar = document.createElement('div');
     avatar.className = "w-8 h-8 bg-black text-white rounded-full flex items-center justify-center font-bold text-xs mr-3 shrink-0 mt-1";
     avatar.innerText = "F";
 
-    const bubble = document.createElement('div');
-    bubble.className = "bg-white border border-gray-200 px-4 py-3 rounded-2xl rounded-tl-sm max-w-[85%] sm:max-w-[75%] markdown-body shadow-sm";
+    const bubbleWrapper = document.createElement('div');
+    bubbleWrapper.className = "bg-white border border-gray-200 px-4 py-3 rounded-2xl rounded-tl-sm max-w-[85%] sm:max-w-[75%] shadow-sm overflow-hidden flex flex-col";
+    
+    const contentDiv = document.createElement('div');
+    contentDiv.className = "markdown-body";
+    
+    // NEW ACTION BAR
+    const actionBar = document.createElement('div');
+    actionBar.className = "hidden flex items-center gap-4 mt-3 pt-3 border-t border-gray-100";
+    actionBar.innerHTML = `
+        <button class="copy-text-btn text-xs text-gray-400 hover:text-black flex items-center gap-1 transition-colors">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
+            Copy
+        </button>
+        <button onclick="retryMessage()" class="text-xs text-gray-400 hover:text-black flex items-center gap-1 transition-colors">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
+            Retry
+        </button>
+    `;
+
+    bubbleWrapper.appendChild(contentDiv);
+    bubbleWrapper.appendChild(actionBar);
     
     wrap.appendChild(avatar);
-    wrap.appendChild(bubble);
+    wrap.appendChild(bubbleWrapper);
     chatBox.appendChild(wrap);
     chatBox.scrollTop = chatBox.scrollHeight;
-    return bubble;
+    
+    return { wrap, contentDiv, actionBar };
+}
+
+function appendAIMessage(text, isHistory = false) {
+    const ui = createEmptyAIBubble();
+    ui.contentDiv.innerHTML = DOMPurify.sanitize(marked.parse(text));
+    
+    if(!isHistory) {
+        const copyBtn = ui.actionBar.querySelector('.copy-text-btn');
+        copyBtn.onclick = function() { copyToClipboard(this, text); };
+        ui.actionBar.classList.remove('hidden');
+    }
 }
 
 if(userInput) {
@@ -335,4 +430,3 @@ if(userInput) {
         if(e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendMessage(); }
     });
 }
-
