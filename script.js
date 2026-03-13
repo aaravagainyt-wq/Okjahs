@@ -1,8 +1,9 @@
 // --- CORE SETTINGS ---
 const API_URL = "https://lord123hh-shsj.hf.space/chat"; 
+const UPLOAD_API_URL = "https://lord123hh-shsj.hf.space/upload"; // NEW: Dedicated Food Scanner API
 
 let sessionUser = "User";
-let currentFile = { data: null, mime: null, name: null };
+let currentFile = { data: null, mime: null, name: null, rawFile: null }; // Added rawFile to hold the actual image object
 let chats = JSON.parse(localStorage.getItem('fase_chats_pro_v3')) || [];
 let activeChatId = null;
 
@@ -14,8 +15,7 @@ const sidebar = document.getElementById('sidebar');
 const userInput = document.getElementById('user-input');
 const dragOverlay = document.getElementById('drag-overlay');
 
-// --- NEW: DYNAMIC MATH RENDERER (MATHJAX) ---
-// This injects beautiful textbook math rendering without touching HTML
+// --- DYNAMIC MATH RENDERER (MATHJAX) ---
 window.MathJax = {
     tex: { 
         inlineMath: [['$', '$'], ['\\(', '\\)']], 
@@ -28,7 +28,7 @@ mathScript.src = "https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js";
 mathScript.async = true;
 document.head.appendChild(mathScript);
 
-// --- NEW: BULLETPROOF MARKDOWN IDE RENDERER ---
+// --- BULLETPROOF MARKDOWN IDE RENDERER ---
 if(typeof marked !== "undefined" && typeof hljs !== "undefined") {
     const renderer = new marked.Renderer();
     
@@ -54,7 +54,6 @@ if(typeof marked !== "undefined" && typeof hljs !== "undefined") {
         </div>`;
     };
     
-    // breaks: true stops equations from stacking onto the same line!
     marked.use({ renderer, breaks: true }); 
 } else {
     window.marked = { parse: (t) => t };
@@ -91,7 +90,7 @@ window.retryMessage = function() {
     userInput.value = lastUserMsg.content;
     if(lastUserMsg.file) {
         currentFile = { ...lastUserMsg.file };
-        setFileData(currentFile.data, currentFile.mime, currentFile.name || "Attached File");
+        setFileData(currentFile.data, currentFile.mime, currentFile.name || "Attached File", currentFile.rawFile);
     }
     sendMessage();
 };
@@ -219,18 +218,19 @@ function processFile(file) {
                 canvas.width = w; canvas.height = h;
                 canvas.getContext('2d').drawImage(img, 0, 0, w, h);
                 
-                setFileData(canvas.toDataURL('image/jpeg', 0.6), file.type, file.name);
+                // Passed the raw 'file' here so the scanner endpoint can use it!
+                setFileData(canvas.toDataURL('image/jpeg', 0.6), file.type, file.name, file);
             };
             img.src = e.target.result;
         } else {
-            setFileData(e.target.result, file.type, file.name);
+            setFileData(e.target.result, file.type, file.name, file);
         }
     };
     reader.readAsDataURL(file);
 }
 
-function setFileData(data, mime, name) {
-    currentFile = { data, mime, name };
+function setFileData(data, mime, name, rawFile = null) {
+    currentFile = { data, mime, name, rawFile };
     if(document.getElementById('file-name-display')) document.getElementById('file-name-display').innerText = name;
     
     let icon = '📄';
@@ -243,7 +243,7 @@ function setFileData(data, mime, name) {
 }
 
 function clearFile() {
-    currentFile = { data: null, mime: null, name: null };
+    currentFile = { data: null, mime: null, name: null, rawFile: null };
     if(document.getElementById('file-tray')) document.getElementById('file-tray').classList.add('hidden');
     if(document.getElementById('file-input')) document.getElementById('file-input').value = "";
 }
@@ -267,6 +267,7 @@ function loadChat(chatId) {
     if (chat && chat.messages.length > 0) {
         chat.messages.forEach(msg => {
             if(msg.role === 'user') appendUserMessage(msg.content, msg.file);
+            else if (msg.isScannerHTML) appendHTMLBubble(msg.content); // Detect scanner results
             else appendAIMessage(msg.content, true); 
         });
     } else {
@@ -356,7 +357,6 @@ async function sendMessage() {
         
         attachCodeCopyButtons(uiElements.contentDiv);
         
-        // TRIGGER MATH RENDERER
         if (window.MathJax && window.MathJax.typesetPromise) {
             window.MathJax.typesetPromise([uiElements.contentDiv]).catch(err => console.log('Math error:', err));
         }
@@ -456,9 +456,114 @@ function appendAIMessage(text, isHistory = false) {
     }
 }
 
+function appendHTMLBubble(htmlString) {
+    const ui = createEmptyAIBubble();
+    ui.contentDiv.innerHTML = htmlString;
+}
+
 if(userInput) {
     userInput.addEventListener("keypress", (e) => { 
         if(e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendMessage(); }
     });
 }
 
+// ========================================================
+// --- NEW: FOOD HEALTH SCANNER INTEGRATION (TAILWIND) ---
+// ========================================================
+
+// This function can be called from index.html by pressing a new "Scan Food" button
+window.scanNutritionFile = async function(file) {
+    if (!file) return;
+
+    // 1. Show User's image in chat
+    const savedFile = { ...currentFile };
+    appendUserMessage("Please analyze this nutrition label.", savedFile);
+    clearFile();
+
+    // 2. Create AI thinking bubble
+    const uiElements = createEmptyAIBubble();
+    uiElements.contentDiv.innerHTML = `<span class="text-blue-500 font-medium animate-pulse">Scanning nutrition label via AI...</span>`;
+
+    try {
+        // 3. Send raw image file to backend
+        const formData = new FormData();
+        formData.append('image', file);
+
+        const response = await fetch(UPLOAD_API_URL, {
+            method: 'POST',
+            body: formData
+        });
+
+        if (!response.ok) throw new Error("Backend failed to respond.");
+        const data = await response.json();
+
+        if (data.error) throw new Error(data.error);
+
+        // 4. Calculate health score & generate Tailwind HTML
+        const html = generateHealthScannerHTML(data);
+        uiElements.contentDiv.innerHTML = html;
+
+        // 5. Save the visual HTML into the chat history so it doesn't disappear on refresh
+        const currentChat = chats.find(c => c.id === activeChatId);
+        if (currentChat) {
+            currentChat.messages.push({ role: "user", content: "Please analyze this nutrition label.", file: savedFile });
+            currentChat.messages.push({ role: "assistant", content: html, isScannerHTML: true });
+            saveChats();
+        }
+
+    } catch (err) {
+        uiElements.contentDiv.innerHTML = `<span class="text-red-600 font-bold">SCAN ERROR: ${err.message}</span>`;
+    }
+};
+
+// Helper: Takes AI JSON data and builds the beautiful progress bars using Tailwind classes
+function generateHealthScannerHTML(nutriments) {
+    const sugar = nutriments?.sugars_100g || 0;
+    const fat = nutriments?.fat_100g || 0;
+    const salt = nutriments?.salt_100g || 0;
+
+    // Skeleton bug catch
+    if (sugar === 0 && fat === 0 && salt === 0) {
+        return `<div class="p-4 bg-red-50 border border-red-200 rounded-xl text-red-600 font-medium">❓ Could not read the numbers from this picture. Please ensure the label is clear and straight.</div>`;
+    }
+
+    const sugarPercent = Math.min(100, (sugar / 25) * 100); 
+    const fatPercent = Math.min(100, (fat / 20) * 100);
+    const saltPercent = Math.min(100, (salt / 1.5) * 100);
+
+    const averageBadness = (sugarPercent + fatPercent + saltPercent) / 3;
+    const overallHealthPercent = Math.max(0, Math.round(100 - averageBadness));
+
+    let headerColor = "text-red-500";
+    if (overallHealthPercent >= 70) headerColor = "text-green-500";
+    else if (overallHealthPercent >= 40) headerColor = "text-yellow-500";
+
+    const makeBar = (label, amount, pct) => {
+        let barColor = "bg-green-500";
+        let status = "Good";
+        if (pct >= 75) { barColor = "bg-red-500"; status = "High"; }
+        else if (pct >= 40) { barColor = "bg-yellow-500"; status = "Moderate"; }
+        
+        return `
+        <div class="mt-3">
+            <div class="flex justify-between text-xs font-semibold mb-1">
+                <span class="text-gray-700">${label}: ${amount}g</span>
+                <span class="text-gray-500">${status}</span>
+            </div>
+            <div class="w-full h-2 bg-gray-200 rounded-full overflow-hidden">
+                <div class="h-full ${barColor}" style="width: ${pct}%"></div>
+            </div>
+        </div>`;
+    };
+
+    return `
+    <div class="w-full bg-white border border-gray-200 rounded-xl p-5 shadow-sm">
+        <h3 class="text-sm text-gray-500 font-bold uppercase tracking-wider mb-1">Health Score</h3>
+        <div class="text-4xl font-extrabold ${headerColor} mb-4">${overallHealthPercent}%</div>
+        <div class="border-t border-gray-100 pt-2">
+            ${makeBar('Sugar', sugar, sugarPercent)}
+            ${makeBar('Fat', fat, fatPercent)}
+            ${makeBar('Salt', salt, saltPercent)}
+        </div>
+    </div>`;
+}
