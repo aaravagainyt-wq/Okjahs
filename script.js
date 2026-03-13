@@ -1,9 +1,9 @@
 // --- CORE SETTINGS ---
 const API_URL = "https://lord123hh-shsj.hf.space/chat"; 
-const UPLOAD_API_URL = "https://lord123hh-shsj.hf.space/upload"; // NEW: Dedicated Food Scanner API
+const UPLOAD_API_URL = "https://lord123hh-shsj.hf.space/upload"; // Dedicated Food Scanner API
 
 let sessionUser = "User";
-let currentFile = { data: null, mime: null, name: null, rawFile: null }; // Added rawFile to hold the actual image object
+let currentFile = { data: null, mime: null, name: null, rawFile: null }; 
 let chats = JSON.parse(localStorage.getItem('fase_chats_pro_v3')) || [];
 let activeChatId = null;
 
@@ -218,7 +218,7 @@ function processFile(file) {
                 canvas.width = w; canvas.height = h;
                 canvas.getContext('2d').drawImage(img, 0, 0, w, h);
                 
-                // Passed the raw 'file' here so the scanner endpoint can use it!
+                // Keep the raw file for the backend while setting the dataUrl for UI preview
                 setFileData(canvas.toDataURL('image/jpeg', 0.6), file.type, file.name, file);
             };
             img.src = e.target.result;
@@ -267,7 +267,7 @@ function loadChat(chatId) {
     if (chat && chat.messages.length > 0) {
         chat.messages.forEach(msg => {
             if(msg.role === 'user') appendUserMessage(msg.content, msg.file);
-            else if (msg.isScannerHTML) appendHTMLBubble(msg.content); // Detect scanner results
+            else if (msg.isScannerHTML) appendHTMLBubble(msg.content); // Render Tailwind Widget
             else appendAIMessage(msg.content, true); 
         });
     } else {
@@ -292,7 +292,7 @@ function renderSidebar() {
     });
 }
 
-// --- MESSAGE LOGIC ---
+// --- MESSAGE LOGIC (STANDARD AI CHAT) ---
 function toggleLoading(isLoading) {
     if(document.getElementById('send-btn')) document.getElementById('send-btn').disabled = isLoading;
     if(document.getElementById('send-icon')) document.getElementById('send-icon').classList.toggle('hidden', isLoading);
@@ -468,10 +468,9 @@ if(userInput) {
 }
 
 // ========================================================
-// --- NEW: FOOD HEALTH SCANNER INTEGRATION (TAILWIND) ---
+// --- PRO FOOD HEALTH SCANNER (TAILWIND WIDGET) ---
 // ========================================================
 
-// This function can be called from index.html by pressing a new "Scan Food" button
 window.scanNutritionFile = async function(file) {
     if (!file) return;
 
@@ -482,7 +481,7 @@ window.scanNutritionFile = async function(file) {
 
     // 2. Create AI thinking bubble
     const uiElements = createEmptyAIBubble();
-    uiElements.contentDiv.innerHTML = `<span class="text-blue-500 font-medium animate-pulse">Scanning nutrition label via AI...</span>`;
+    uiElements.contentDiv.innerHTML = `<div class="flex items-center gap-2 text-gray-500 text-sm font-medium animate-pulse"><div class="spinner border-2 border-t-black rounded-full w-4 h-4"></div> Fase is triple-checking the label...</div>`;
 
     try {
         // 3. Send raw image file to backend
@@ -499,11 +498,11 @@ window.scanNutritionFile = async function(file) {
 
         if (data.error) throw new Error(data.error);
 
-        // 4. Calculate health score & generate Tailwind HTML
+        // 4. Generate beautiful Tailwind HTML from the rich AI JSON
         const html = generateHealthScannerHTML(data);
         uiElements.contentDiv.innerHTML = html;
 
-        // 5. Save the visual HTML into the chat history so it doesn't disappear on refresh
+        // 5. Save the visual HTML into the chat history
         const currentChat = chats.find(c => c.id === activeChatId);
         if (currentChat) {
             currentChat.messages.push({ role: "user", content: "Please analyze this nutrition label.", file: savedFile });
@@ -512,58 +511,115 @@ window.scanNutritionFile = async function(file) {
         }
 
     } catch (err) {
-        uiElements.contentDiv.innerHTML = `<span class="text-red-600 font-bold">SCAN ERROR: ${err.message}</span>`;
+        uiElements.contentDiv.innerHTML = `<div class="p-3 bg-red-50 text-red-600 border border-red-200 rounded-xl text-sm font-bold">SCAN ERROR: ${err.message}</div>`;
     }
 };
 
-// Helper: Takes AI JSON data and builds the beautiful progress bars using Tailwind classes
-function generateHealthScannerHTML(nutriments) {
-    const sugar = nutriments?.sugars_100g || 0;
-    const fat = nutriments?.fat_100g || 0;
-    const salt = nutriments?.salt_100g || 0;
-
-    // Skeleton bug catch
-    if (sugar === 0 && fat === 0 && salt === 0) {
-        return `<div class="p-4 bg-red-50 border border-red-200 rounded-xl text-red-600 font-medium">❓ Could not read the numbers from this picture. Please ensure the label is clear and straight.</div>`;
+// Helper: Takes the rich AI JSON data and builds a premium Tailwind widget
+function generateHealthScannerHTML(data) {
+    // Fallback if AI totally failed to read anything
+    if (!data.health_score && (!data.main_bars || data.main_bars.length === 0)) {
+        return `<div class="p-4 bg-red-50 border border-red-200 rounded-xl text-red-600 font-medium text-sm">❓ Fase could not extract valid data from this image. Please ensure the label is clear and readable.</div>`;
     }
 
-    const sugarPercent = Math.min(100, (sugar / 25) * 100); 
-    const fatPercent = Math.min(100, (fat / 20) * 100);
-    const saltPercent = Math.min(100, (salt / 1.5) * 100);
-
-    const averageBadness = (sugarPercent + fatPercent + saltPercent) / 3;
-    const overallHealthPercent = Math.max(0, Math.round(100 - averageBadness));
-
+    const score = data.health_score || 0;
+    
+    // Determine Header Color
     let headerColor = "text-red-500";
-    if (overallHealthPercent >= 70) headerColor = "text-green-500";
-    else if (overallHealthPercent >= 40) headerColor = "text-yellow-500";
+    if (score >= 70) headerColor = "text-green-500";
+    else if (score >= 40) headerColor = "text-yellow-500";
 
-    const makeBar = (label, amount, pct) => {
-        let barColor = "bg-green-500";
-        let status = "Good";
-        if (pct >= 75) { barColor = "bg-red-500"; status = "High"; }
-        else if (pct >= 40) { barColor = "bg-yellow-500"; status = "Moderate"; }
-        
-        return `
-        <div class="mt-3">
-            <div class="flex justify-between text-xs font-semibold mb-1">
-                <span class="text-gray-700">${label}: ${amount}g</span>
-                <span class="text-gray-500">${status}</span>
+    // 1. Start Widget Container & Header
+    let html = `
+    <div class="w-full bg-white border border-gray-200 rounded-2xl p-4 sm:p-5 shadow-sm overflow-hidden my-2">
+        <div class="flex justify-between items-start mb-5">
+            <div>
+                <h3 class="text-xs text-gray-500 font-bold uppercase tracking-wider mb-1">AI Nutrition Analysis</h3>
+                ${data.calories && data.calories !== "Error" ? `<div class="inline-block px-3 py-1 bg-gray-100 text-gray-800 text-xs font-bold rounded-full border border-gray-200 shadow-sm">⚡ ${data.calories}</div>` : ''}
             </div>
-            <div class="w-full h-2 bg-gray-200 rounded-full overflow-hidden">
-                <div class="h-full ${barColor}" style="width: ${pct}%"></div>
-            </div>
-        </div>`;
-    };
-
-    return `
-    <div class="w-full bg-white border border-gray-200 rounded-xl p-5 shadow-sm">
-        <h3 class="text-sm text-gray-500 font-bold uppercase tracking-wider mb-1">Health Score</h3>
-        <div class="text-4xl font-extrabold ${headerColor} mb-4">${overallHealthPercent}%</div>
-        <div class="border-t border-gray-100 pt-2">
-            ${makeBar('Sugar', sugar, sugarPercent)}
-            ${makeBar('Fat', fat, fatPercent)}
-            ${makeBar('Salt', salt, saltPercent)}
+            <div class="text-4xl font-extrabold ${headerColor} tracking-tighter drop-shadow-sm">${score}%</div>
         </div>
-    </div>`;
+        
+        <div class="space-y-4 border-t border-gray-100 pt-4">
+    `;
+
+    // 2. Render Main Progress Bars (Sugar, Fat, Salt)
+    if (data.main_bars && data.main_bars.length > 0) {
+        data.main_bars.forEach(bar => {
+            let barBg = "bg-green-500";
+            let textColor = "text-green-600";
+            
+            if (bar.status.includes("High") || bar.colorClass === 'fill-bad') {
+                barBg = "bg-red-500";
+                textColor = "text-red-600";
+            } else if (bar.status.includes("Moderate") || bar.colorClass === 'fill-moderate') {
+                barBg = "bg-yellow-500";
+                textColor = "text-yellow-600";
+            }
+
+            html += `
+            <div>
+                <div class="flex justify-between text-xs font-semibold mb-1.5">
+                    <span class="text-gray-700">${bar.name}: <span class="font-normal text-gray-500">${bar.amount}</span></span>
+                    <span class="${textColor}">${bar.status}</span>
+                </div>
+                <div class="w-full h-2.5 bg-gray-100 rounded-full overflow-hidden border border-gray-200/50">
+                    <div class="h-full ${barBg} rounded-full" style="width: ${Math.min(100, bar.percentage)}%"></div>
+                </div>
+            </div>`;
+        });
+    }
+
+    html += `</div>`; // Close bars container
+
+    // 3. Render Dynamic Table (For all the extra nutrients)
+    if (data.all_nutrients && Object.keys(data.all_nutrients).length > 0) {
+        html += `
+        <div class="mt-5 border border-gray-200 rounded-xl overflow-hidden shadow-sm">
+            <table class="w-full text-left text-xs">
+                <thead class="bg-gray-50 text-gray-500 border-b border-gray-200">
+                    <tr>
+                        <th class="px-3 py-2.5 font-semibold">Nutrient</th>
+                        <th class="px-3 py-2.5 font-semibold">Amount</th>
+                        <th class="px-3 py-2.5 font-semibold">Eval</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-100 bg-white">
+        `;
+        
+        for (const [key, details] of Object.entries(data.all_nutrients)) {
+            let statusColor = "text-gray-600";
+            if (details.status.includes("Good")) statusColor = "text-green-600 font-medium";
+            if (details.status.includes("High")) statusColor = "text-red-600 font-bold";
+            if (details.status.includes("Moderate")) statusColor = "text-yellow-600 font-medium";
+
+            let cleanKey = key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+            
+            html += `
+                <tr class="hover:bg-gray-50 transition-colors">
+                    <td class="px-3 py-2 text-gray-800 font-medium">${cleanKey}</td>
+                    <td class="px-3 py-2 text-gray-600">${details.amount}</td>
+                    <td class="px-3 py-2 ${statusColor}">${details.status}</td>
+                </tr>
+            `;
+        }
+        
+        html += `</tbody></table></div>`;
+    }
+
+    // 4. Render AI Remarks
+    if (data.ai_remarks) {
+        html += `
+        <div class="mt-5 p-4 bg-gray-50 border-l-4 border-black rounded-r-xl shadow-sm">
+            <div class="flex items-center gap-2 mb-1">
+                <svg class="w-4 h-4 text-black" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                <p class="text-[11px] font-bold uppercase tracking-wider text-black">AI Remarks</p>
+            </div>
+            <p class="text-sm text-gray-700 leading-relaxed italic ml-6">${data.ai_remarks}</p>
+        </div>`;
+    }
+
+    html += `</div>`; // Close main widget wrapper
+    return html;
 }
+
