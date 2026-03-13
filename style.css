@@ -88,3 +88,54 @@ body {
     to { transform: rotate(360deg); } 
 }
 
+/* =========================================
+   FOOD SCANNER CHAT WIDGET
+   ========================================= */
+.nutrition-widget {
+    background: radial-gradient(circle, #1a1b1e 0%, #121212 100%);
+    border: 1px solid #c5a02f;
+    border-radius: 12px;
+    padding: 20px;
+    color: #eee;
+    width: 100%;
+    max-width: 450px;
+    margin: 10px 0;
+    box-shadow: 0 4px 15px rgba(197, 160, 47, 0.15);
+}
+.nutrition-widget .widget-title { 
+    color: #c5a02f; font-size: 1.25rem; font-weight: bold; margin-bottom: 10px; text-align: center; font-family: 'Playfair Display', serif;
+}
+.nutrition-widget .calorie-badge { 
+    display: block; background: rgba(197, 160, 47, 0.15); border: 1px solid #c5a02f; color: #ffd700; padding: 6px 12px; border-radius: 20px; font-weight: bold; font-size: 0.95rem; margin: 0 auto 15px auto; text-align: center; width: fit-content;
+}
+.nutrition-widget .health-percentage { 
+    font-size: 2.5rem; font-weight: bold; text-align: center; margin: 5px 0 15px 0; text-shadow: 0 0 10px rgba(0,0,0,0.5);
+}
+
+/* Custom Progress Bars inside Widget */
+.nutrition-widget .stat-row { margin-bottom: 12px; text-align: left; }
+.nutrition-widget .stat-labels { display: flex; justify-content: space-between; font-size: 0.85rem; margin-bottom: 4px; color: #ccc; }
+.nutrition-widget .stat-bar-bg { width: 100%; height: 6px; background: #333; border-radius: 3px; overflow: hidden; }
+.nutrition-widget .stat-bar-fill { height: 100%; border-radius: 3px; transition: width 1s ease-in-out; }
+.nutrition-widget .fill-good { background-color: #33cc33; }
+.nutrition-widget .fill-moderate { background-color: #ffcc00; }
+.nutrition-widget .fill-bad { background-color: #ff4d4d; }
+
+/* Dynamic Table */
+.nutrition-widget .nutri-table { 
+    width: 100%; border-collapse: collapse; margin-top: 15px; font-size: 0.85rem; text-align: left; background: rgba(0,0,0,0.2); border-radius: 8px; overflow: hidden; 
+}
+.nutrition-widget .nutri-table th { 
+    color: #c5a02f; border-bottom: 1px solid rgba(197, 160, 47, 0.3); padding: 8px; background: rgba(197, 160, 47, 0.05); 
+}
+.nutrition-widget .nutri-table td { padding: 8px; border-bottom: 1px solid #333; color: #ddd; }
+.nutrition-widget .nutri-table tr:last-child td { border-bottom: none; }
+
+/* AI Remarks Block */
+.nutrition-widget .ai-remarks { 
+    margin-top: 15px; padding: 12px; background: rgba(197, 160, 47, 0.05); border-left: 3px solid #c5a02f; border-radius: 4px; font-size: 0.85rem; text-align: left;
+}
+.nutrition-widget .ai-remarks-title { 
+    color: #c5a02f; font-weight: bold; margin-bottom: 4px; text-transform: uppercase; font-size: 0.75rem; letter-spacing: 0.5px;
+}
+.nutrition-widget .ai-remarks-text { color: #eee; font-style: italic; line-height: 1.5; }
